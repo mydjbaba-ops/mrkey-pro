@@ -217,29 +217,29 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
 
   return (
     <div style={{ paddingBottom: 90 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 15px", background: "#1a1f2e", borderBottom: "1px solid #2a3149" }}>
-        <button onClick={() => setPage("catalogue")} style={{ background: "none", border: "none", color: "#e8a020", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 15px", background: "#dde3f5", borderBottom: "1px solid rgba(108,99,255,0.12)" }}>
+        <button onClick={() => setPage("catalogue")} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
           <DIcon d="M19 12H5M12 5l-7 7 7 7" /> Retour
         </button>
       </div>
-      <img src={p.image} alt={p.nom} style={{ width: "100%", height: 190, objectFit: "contain", background: "#1a1f2e", borderBottom: "1px solid #2a3149" }} onError={e => { e.target.src = "https://via.placeholder.com/480x190?text=Clé"; }} />
+      <img src={p.image} alt={p.nom} style={{ width: "100%", height: 190, objectFit: "contain", background: "#e8ecf8", borderBottom: "1px solid rgba(108,99,255,0.1)" }} onError={e => { e.target.src = "https://via.placeholder.com/480x190?text=Clé"; }} />
       <div style={{ padding: 18 }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: catColor(p.categorie), textTransform: "uppercase", letterSpacing: 1 }}>{p.categorie}</div>
-        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", marginTop: 5, lineHeight: 1.3 }}>{p.nom}</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: "#1a1d2e", marginTop: 5, lineHeight: 1.3 }}>{p.nom}</div>
         <div style={{ fontSize: 12, color: "#5a6585", marginTop: 4, fontFamily: "monospace" }}>Réf : {p.ref}</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 14 }}>
           {[["Marque", p.marque], ["Modèles", p.modeles || "—"], p.type && ["Type", p.type], p.frequence && ["Fréquence", p.frequence], p.transpondeur && ["Transpondeur", p.transpondeur], p.lame && ["Lame", p.lame], p.pile && ["Pile", p.pile]].filter(Boolean).map(([label, val]) => (
-            <div key={label} style={{ background: "#1a1f2e", borderRadius: 10, padding: "9px 11px", border: "1px solid #252b3b" }}>
+            <div key={label} style={{ background: "#f0f4ff", borderRadius: 10, padding: "9px 11px", border: "1px solid rgba(108,99,255,0.12)" }}>
               <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-              <div style={{ fontSize: 12.5, color: "#2d3352", fontWeight: 600, marginTop: 2 }}>{val}</div>
+              <div style={{ fontSize: 12.5, color: "#1a1d2e", fontWeight: 600, marginTop: 2 }}>{val}</div>
             </div>
           ))}
-          {p.xhorse && <div style={{ background: "#1a1f2e", borderRadius: 10, padding: "9px 11px", border: "1px solid #252b3b" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Xhorse</div><div style={{ fontSize: 12.5, color: "#f472b6", fontWeight: 600, marginTop: 2 }}>{p.xhorse}</div></div>}
-          {p.notes && <div style={{ background: "#1a1f2e", borderRadius: 10, padding: "9px 11px", border: "1px solid #252b3b", gridColumn: "1/-1" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Notes</div><div style={{ fontSize: 12.5, color: "#2d3352", fontWeight: 600, marginTop: 2 }}>{p.notes}</div></div>}
-          {p.prix && <div style={{ background: "#1a1f2e", borderRadius: 10, padding: "9px 11px", border: "1px solid #252b3b" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Prix indicatif</div><div style={{ fontSize: 12.5, color: "#e8a020", fontWeight: 800, marginTop: 2 }}>{p.prix.toFixed(2)} €</div></div>}
+          {p.xhorse && <div style={{ background: "#f0f4ff", borderRadius: 10, padding: "9px 11px", border: "1px solid rgba(108,99,255,0.12)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Xhorse</div><div style={{ fontSize: 12.5, color: "#f472b6", fontWeight: 600, marginTop: 2 }}>{p.xhorse}</div></div>}
+          {p.notes && <div style={{ background: "#f0f4ff", borderRadius: 10, padding: "9px 11px", border: "1px solid rgba(108,99,255,0.12)", gridColumn: "1/-1" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Notes</div><div style={{ fontSize: 12.5, color: "#1a1d2e", fontWeight: 600, marginTop: 2 }}>{p.notes}</div></div>}
+          {p.prix && <div style={{ background: "#f0f4ff", borderRadius: 10, padding: "9px 11px", border: "1px solid rgba(108,99,255,0.12)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Prix indicatif</div><div style={{ fontSize: 12.5, color: "#e8a020", fontWeight: 800, marginTop: 2 }}>{p.prix.toFixed(2)} €</div></div>}
         </div>
 
-        <div style={{ background: "#1a1f2e", borderRadius: 12, padding: 15, marginTop: 14, border: "1px solid #2a3149" }}>
+        <div style={{ background: "#f0f4ff", borderRadius: 14, padding: 16, marginTop: 14, border: "1px solid rgba(108,99,255,0.12)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div>
               <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Stock actuel</div>
@@ -247,40 +247,40 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
               {isInit && <div style={{ fontSize: 11, color: "#5a6585", marginTop: 1 }}>Stock non renseigné</div>}
               {isLow && <div style={{ fontSize: 11, color: "#ff6b6b", marginTop: 1 }}>⚠ Seuil atteint ({seuil})</div>}
               {!isInit && (() => { const aCommander = Math.max(0, seuil * 2 - qty); return aCommander > 0 ? (
-                <div style={{ marginTop: 6, background: "#2a1a0a", border: "1px solid #e8a02055", borderRadius: 8, padding: "6px 10px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <div style={{ marginTop: 6, background: "rgba(255,167,38,0.1)", border: "1px solid rgba(255,167,38,0.3)", borderRadius: 8, padding: "6px 10px", display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 10, color: "#e8a020", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>À commander</span>
                   <span style={{ fontSize: 18, fontWeight: 900, color: "#e8a020" }}>{aCommander}</span>
                   <span style={{ fontSize: 10, color: "#5a6585" }}>clé{aCommander > 1 ? "s" : ""}</span>
                 </div>
               ) : (
-                <div style={{ marginTop: 6, background: "#0a2a1a", border: "1px solid #4ade8055", borderRadius: 8, padding: "6px 10px", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 10, color: "#4ade80", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Stock suffisant</span>
+                <div style={{ marginTop: 6, background: "rgba(0,245,147,0.1)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 8, padding: "6px 10px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 10, color: "#00b87a", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Stock suffisant</span>
                   <span style={{ fontSize: 10, color: "#5a6585" }}>0 clé à commander</span>
                 </div>
               ); })()}
             </div>
-            <button onClick={() => setShowHistory(p.id)} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#5a6585", padding: "7px 11px", borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
+            <button onClick={() => setShowHistory(p.id)} style={{ background: "#ffffff", border: "1px solid rgba(108,99,255,0.15)", color: "#5a6585", padding: "8px 12px", borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
               <DIcon d="M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-3M3 4v4h4" /> Historique
             </button>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button style={{ width: 36, height: 36, borderRadius: 8, border: "none", cursor: "pointer", background: "#2a1515", color: "#ff6b6b", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => adjustStock(-1)}><DIcon d="M5 12h14" /></button>
+            <button style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(255,71,87,0.2)", cursor: "pointer", background: "rgba(255,71,87,0.08)", color: "#ff4757", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => adjustStock(-1)}><DIcon d="M5 12h14" /></button>
             <div style={{ flex: 1, textAlign: "center", fontSize: 12, color: "#5a6585" }}>Ajuster</div>
-            <button style={{ width: 36, height: 36, borderRadius: 8, border: "none", cursor: "pointer", background: "#0e2a1a", color: "#4ade80", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => adjustStock(1)}><DIcon d="M12 5v14M5 12h14" /></button>
+            <button style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid rgba(0,245,147,0.2)", cursor: "pointer", background: "rgba(0,245,147,0.08)", color: "#00b87a", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => adjustStock(1)}><DIcon d="M12 5v14M5 12h14" /></button>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
             <input ref={qtyRef} type="number" min="0"
               placeholder={flash === "qty" ? "✓ Enregistré !" : isInit ? "Quantité exacte" : `Quantité exacte (actuel : ${qty})`}
-              style={{ flex: 1, background: flash === "qty" ? "#0e2a1a" : "#252b3b", border: `1px solid ${flash === "qty" ? "#4ade80" : "#2a3149"}`, borderRadius: 8, padding: "8px 11px", color: flash === "qty" ? "#4ade80" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
+              style={{ flex: 1, background: flash === "qty" ? "rgba(0,245,147,0.08)" : "#ffffff", border: `1px solid ${flash === "qty" ? "#00b87a" : "rgba(108,99,255,0.2)"}`, borderRadius: 12, padding: "10px 14px", color: flash === "qty" ? "#00b87a" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
               onKeyDown={e => e.key === "Enter" && handleSetQty()} />
-            <button style={{ padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "#e8a020", color: "#0f1117", fontWeight: 700, fontSize: 12 }} onClick={handleSetQty}>Définir</button>
+            <button style={{ padding: "10px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12 }} onClick={handleSetQty}>Définir</button>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
             <input ref={seuilRef} type="number" min="0"
               placeholder={flash === "seuil" ? `✓ Seuil → ${seuil}` : `Seuil alerte (actuel: ${seuil})`}
-              style={{ flex: 1, background: flash === "seuil" ? "#0e2a1a" : "#252b3b", border: `1px solid ${flash === "seuil" ? "#4ade80" : "#2a3149"}`, borderRadius: 8, padding: "8px 11px", color: flash === "seuil" ? "#4ade80" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
+              style={{ flex: 1, background: flash === "seuil" ? "rgba(0,245,147,0.08)" : "#ffffff", border: `1px solid ${flash === "seuil" ? "#00b87a" : "rgba(108,99,255,0.2)"}`, borderRadius: 12, padding: "10px 14px", color: flash === "seuil" ? "#00b87a" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
               onKeyDown={e => e.key === "Enter" && handleSetSeuil()} />
-            <button style={{ padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "#e8a020", color: "#0f1117", fontWeight: 700, fontSize: 12 }} onClick={handleSetSeuil}>Seuil</button>
+            <button style={{ padding: "10px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12 }} onClick={handleSetSeuil}>Seuil</button>
           </div>
         </div>
 
@@ -691,7 +691,7 @@ export default function App() {
     const progress = Math.round(((setupStep) / totalGroups) * 100);
 
     return (
-      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#0e1117", minHeight: "100vh", maxWidth: 480, margin: "0 auto", color: "#1a1d2e" }}>
+      <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#dde3f5", minHeight: "100vh", maxWidth: 480, margin: "0 auto", color: "#1a1d2e" }}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <style>{`
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -708,18 +708,18 @@ export default function App() {
       `}</style>
 
         {/* Header */}
-        <div style={{ background: "linear-gradient(135deg,#1a1f2e,#252b3b)", padding: "20px 20px 16px", borderBottom: "1px solid #2a3149", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ background: "rgba(221,227,245,0.95)", padding: "20px 20px 16px", borderBottom: "1px solid rgba(108,99,255,0.12)", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#e8a020,#f5c842)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <KeyIcon />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>MrKey Pro</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#1a1d2e" }}>MrKey Pro</div>
               <div style={{ fontSize: 10, color: "#5a6585" }}>Configuration initiale du stock</div>
             </div>
           </div>
           {/* Progress bar */}
-          <div style={{ background: "#1e2535", borderRadius: 10, height: 6, overflow: "hidden", marginBottom: 6 }}>
+          <div style={{ background: "rgba(108,99,255,0.12)", borderRadius: 10, height: 6, overflow: "hidden", marginBottom: 6 }}>
             <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(90deg,#e8a020,#f5c842)", borderRadius: 10, transition: "width 0.3s" }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#5a6585" }}>
@@ -735,8 +735,8 @@ export default function App() {
                 {currentGroup.marque === "Xhorse" ? "🔧" : "🚗"} {currentGroup.marque} <span style={{ color: "#3d4870", fontWeight: 600, fontSize: 11 }}>({currentGroup.products.length} références)</span>
               </div>
               {currentGroup.products.map(p => (
-                <div key={p.id} style={{ background: "#1a1f2e", borderRadius: 12, padding: "11px 13px", marginBottom: 8, border: "1px solid #2a3149", display: "flex", alignItems: "center", gap: 10 }}>
-                  <img src={p.image} alt="" style={{ width: 44, height: 44, objectFit: "contain", background: "#252b3b", borderRadius: 8, flexShrink: 0 }}
+                <div key={p.id} style={{ background: "#ffffff", borderRadius: 14, padding: "12px 14px", marginBottom: 8, border: "1px solid rgba(108,99,255,0.12)", display: "flex", alignItems: "center", gap: 10 }}>
+                  <img src={p.image} alt="" style={{ width: 44, height: 44, objectFit: "contain", background: "#f0f4ff", borderRadius: 10, flexShrink: 0 }}
                     onError={e => { e.target.src = "https://via.placeholder.com/44?text=🔑"; }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#2d3352", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
@@ -746,7 +746,7 @@ export default function App() {
                     type="number" min="0" placeholder="0"
                     value={setupDraft[p.id]}
                     onChange={e => setSetupDraft(prev => ({ ...prev, [p.id]: e.target.value }))}
-                    style={{ width: 56, background: "#252b3b", border: "1px solid #3a4a6a", borderRadius: 8, padding: "6px 8px", color: "#1a1d2e", fontSize: 14, fontWeight: 700, textAlign: "center", outline: "none", flexShrink: 0 }}
+                    style={{ width: 56, background: "#ffffff", border: "1px solid #3a4a6a", borderRadius: 8, padding: "6px 8px", color: "#1a1d2e", fontSize: 14, fontWeight: 700, textAlign: "center", outline: "none", flexShrink: 0 }}
                   />
                 </div>
               ))}
@@ -767,7 +767,7 @@ export default function App() {
               {setupGroups.map(g => {
                 const total = g.products.reduce((s, p) => s + (parseInt(setupDraft[p.id]) || 0), 0);
                 return (
-                  <div key={g.marque} style={{ background: "#1a1f2e", borderRadius: 10, padding: "9px 13px", marginBottom: 6, border: "1px solid #2a3149", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={g.marque} style={{ background: "#ffffff", borderRadius: 12, padding: "10px 14px", marginBottom: 6, border: "1px solid rgba(108,99,255,0.12)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: "#2d3352" }}>🚗 {g.marque}</span>
                     <span style={{ fontSize: 12, fontWeight: 800, color: total > 0 ? "#4ade80" : "#5a6585" }}>{total} unités</span>
                   </div>
@@ -778,16 +778,16 @@ export default function App() {
         </div>
 
         {/* Footer navigation */}
-        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#1a1f2e", borderTop: "1px solid #2a3149", padding: "12px 16px", display: "flex", gap: 10, zIndex: 200 }}>
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#f0f4ff", borderTop: "1px solid #2a3149", padding: "12px 16px", display: "flex", gap: 10, zIndex: 200 }}>
           {setupStep > 0 && (
             <button onClick={() => setSetupStep(s => s - 1)}
-              style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", cursor: "pointer", background: "#252b3b", color: "#5a6585", fontWeight: 700, fontSize: 13 }}>
+              style={{ flex: 1, padding: 12, borderRadius: 10, border: "none", cursor: "pointer", background: "rgba(108,99,255,0.08)", color: "#6c63ff", fontWeight: 700, fontSize: 13 }}>
               ← Précédent
             </button>
           )}
           {setupStep < totalGroups ? (
             <button onClick={() => setSetupStep(s => s + 1)}
-              style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#e8a020,#f5c842)", color: "#0f1117", fontWeight: 800, fontSize: 13 }}>
+              style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#0f1117", fontWeight: 800, fontSize: 13 }}>
               Suivant →
             </button>
           ) : (
@@ -797,7 +797,7 @@ export default function App() {
             </button>
           )}
           <button onClick={() => { try { localStorage.setItem(SETUP_KEY, "1"); } catch(e){} setShowSetup(false); }}
-            style={{ padding: "12px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: "#252b3b", color: "#5a6585", fontWeight: 600, fontSize: 11 }}>
+            style={{ padding: "12px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: "rgba(108,99,255,0.08)", color: "#6c63ff", fontWeight: 600, fontSize: 11 }}>
             Passer
           </button>
         </div>
@@ -890,7 +890,7 @@ export default function App() {
                   </div>
                 ))
               }
-              <button style={{ width: "100%", marginTop: 12, padding: 11, background: "#252b3b", border: "none", borderRadius: 10, color: "#5a6585", cursor: "pointer", fontWeight: 700 }} onClick={() => setShowHistory(null)}>Fermer</button>
+              <button style={{ width: "100%", marginTop: 12, padding: 11, background: "#ffffff", border: "none", borderRadius: 10, color: "#5a6585", cursor: "pointer", fontWeight: 700 }} onClick={() => setShowHistory(null)}>Fermer</button>
             </div>
           </div>
         )}
