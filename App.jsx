@@ -4237,6 +4237,25 @@ function UrlProductImport({ onProductCreated, onClose }) {
           <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
         </div>
 
+        {/* Champ image */}
+        <div style={{ ...row, background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px" }}>
+          <label style={{ ...lbl, color: "#6c63ff" }}>📸 URL de la photo du produit</label>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            {form.image && form.image !== FALLBACK_IMG && (
+              <img src={form.image} alt="" onError={e => { e.target.style.display="none"; }}
+                style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8, background: "#e8edf8", flexShrink: 0, border: "1px solid rgba(108,99,255,0.2)" }} />
+            )}
+            <input
+              value={form.image === FALLBACK_IMG ? "" : (form.image || "")}
+              onChange={e => set("image", e.target.value)}
+              placeholder="Appui long sur la photo → Copier le lien"
+              style={{ ...inp, fontSize: 11 }}
+              inputMode="url"
+            />
+          </div>
+          <div style={{ fontSize: 10, color: "#5a6585", marginTop: 6 }}>💡 Sur mobile : ouvre la page produit → appui long sur la photo → "Copier le lien de l'image"</div>
+        </div>
+
         {/* Boutons */}
         <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
           <button onClick={onClose}
