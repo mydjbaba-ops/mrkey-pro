@@ -1,5 +1,4 @@
-// api/analyse-produit.js  — fonction serverless Vercel
-// Place ce fichier dans : api/analyse-produit.js
+// api/analyse-produit.js — fonction serverless Vercel (GRATUIT via microlink.io)
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erreur: "Méthode non autorisée" });
@@ -7,51 +6,64 @@ export default async function handler(req, res) {
   const { url } = req.body || {};
   if (!url) return res.status(400).json({ erreur: "URL manquante" });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ erreur: "Clé API non configurée sur le serveur" });
-
-  const prompt = `Tu es un expert en clés et télécommandes automobiles aftermarket.
-
-Visite cette page produit et extrait les informations : ${url}
-
-Réponds UNIQUEMENT en JSON valide (sans markdown, sans backticks) avec ces champs :
-{
-  "nom": "nom complet du produit",
-  "ref": "référence ou SKU",
-  "marque": "marque du véhicule compatible (Renault, Peugeot, BMW...)",
-  "modeles": "modèles compatibles",
-  "prix": 0,
-  "type": "Clé ou Télécommande ou Coque ou Transpondeur ou Lame ou Accessoire",
-  "freq": "fréquence radio (ex: 433MHz) ou vide",
-  "transpondeur": "type transpondeur (ex: ID46) ou vide",
-  "lame": "référence lame ou vide"
-}
-
-Si impossible d'analyser : {"erreur": "raison"}`;
-
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        tools: [{ type: "web_search_20250305", name: "web_search" }],
-        messages: [{ role: "user", content: prompt }],
-      }),
+    // Microlink.io — gratuit, pas de clé API
+    const mlRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}&palette=false&audio=false&video=false&iframe=false`);
+    const ml = await mlRes.json();
+
+    if (ml.status !== "success") {
+      return res.status(200).json({ erreur: "Impossible de lire cette page" });
+    }
+
+    const d = ml.data;
+    const titre = d.title || "";
+    const description = d.description || "";
+    const texte = (titre + " " + description).toLowerCase();
+
+    // Détection marque véhicule
+    const marques = ["renault","peugeot","citroen","volkswagen","vw","bmw","mercedes","audi","ford","opel","toyota","nissan","fiat","seat","skoda","volvo","hyundai","kia","honda","mitsubishi","mazda","suzuki","dacia","mini","smart","porsche","land rover","jaguar","lexus"];
+    const marque = marques.find(m => texte.includes(m)) || "";
+
+    // Détection fréquence
+    const freqMatch = texte.match(/(\d{3}[\.,]\d+\s*mhz|\d{3}\s*mhz)/i);
+    const freq = freqMatch ? freqMatch[0].toUpperCase().replace(",", ".") : "";
+
+    // Détection transpondeur
+    const transpMatch = texte.match(/id[\s-]?(\d{2,3})|pcf\d{4,}|hitag\s?\d?|megamos/i);
+    const transpondeur = transpMatch ? transpMatch[0].toUpperCase() : "";
+
+    // Détection lame
+    const lameMatch = texte.match(/\b(va[0-9]+|hu[0-9]+|huf[0-9]+|toy[0-9]+|sip[0-9]+|hu[0-9]+|nf[0-9]+|vac[0-9]+|fiat[0-9]+|hy[0-9]+|rn[0-9]+)\b/i);
+    const lame = lameMatch ? lameMatch[0].toUpperCase() : "";
+
+    // Détection type
+    let type = "Clé";
+    if (texte.includes("télécommande") || texte.includes("remote") || texte.includes("keyfob")) type = "Télécommande";
+    else if (texte.includes("coque") || texte.includes("shell") || texte.includes("boitier")) type = "Coque";
+    else if (texte.includes("transpondeur") || texte.includes("transponder")) type = "Transpondeur";
+    else if (texte.includes("lame") || texte.includes("blade")) type = "Lame";
+
+    // Détection prix
+    const prixMatch = (titre + " " + description).match(/(\d+[.,]\d{2})\s*€|€\s*(\d+[.,]\d{2})/);
+    const prix = prixMatch ? parseFloat((prixMatch[1] || prixMatch[2]).replace(",", ".")) : 0;
+
+    // Référence depuis l'URL
+    const urlParts = url.split("/").filter(Boolean);
+    const refSlug = urlParts[urlParts.length - 1] || "";
+    const ref = refSlug.split("-").slice(0, 4).join("-").toUpperCase().slice(0, 20);
+
+    return res.status(200).json({
+      nom: titre || "Produit importé",
+      ref: ref || "",
+      marque: marque ? marque.charAt(0).toUpperCase() + marque.slice(1) : "",
+      modeles: "",
+      prix,
+      type,
+      freq,
+      transpondeur,
+      lame,
     });
 
-    const data = await response.json();
-    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return res.status(200).json({ erreur: "Impossible d'extraire les données de cette page" });
-
-    const parsed = JSON.parse(match[0]);
-    return res.status(200).json(parsed);
   } catch (e) {
     return res.status(500).json({ erreur: "Erreur serveur : " + e.message });
   }
