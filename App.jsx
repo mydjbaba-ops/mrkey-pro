@@ -3026,20 +3026,22 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   function doAdd(entry) {
     if (added[entry.ref]) return;
     const mainApp = entry.applications[0];
-    const label   = mainApp ? `${mainApp.make} ${mainApp.model}` : entry.marque;
+    const marqueVehicule = mainApp ? mainApp.make : (entry.marque || "");
+    const modeles = entry.applications ? entry.applications.map(a => a.model).filter(Boolean).join(", ") : "";
+    const label = mainApp ? `${mainApp.make} ${mainApp.model}` : entry.marque;
     onAddToStock && onAddToStock({
       id:            "silca-" + entry.ref + "-" + Date.now(),
       nom:           label + " · " + TLBL[entry.type] + " [" + entry.ref + "]",
       ref:           entry.ref,
       lame:          entry.blade,
-      marque:        "Aftermarket",
-      marqueVehicule: entry.marque,
+      marque:        marqueVehicule,
+      modeles:       modeles,
       transpondeur:  entry.transponder || "",
       freq:          entry.freq,
-      type:          "Aftermarket " + TLBL[entry.type],
+      type:          TLBL[entry.type] || "Clé",
       buttons:       entry.buttons,
       prix:          0,
-      categorie:     "Stock",
+      categorie:     "Aftermarket France",
       emoji:         TICON[entry.type],
       silcaType:     entry.type,
       applications:  entry.applications,
@@ -3839,11 +3841,12 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                                   type: "Xhorse",
                                   ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx,
                                   prix: 0,
-                                  categorie: "Stock",
+                                  categorie: "Xhorse",
                                   emoji: "🔑",
                                   image: keyPhoto || entry.image,
                                   remotes: entry.remotes,
                                   xhorse: entry.remotes.join(", "),
+                                  prox: entry.prox || false,
                                 };
                                 onAddToStock && onAddToStock(newProd);
                                 setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
@@ -3920,11 +3923,12 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                                     type: "Xhorse",
                                     ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(),
                                     prix: 0,
-                                    categorie: "Stock",
+                                    categorie: "Xhorse",
                                     emoji: "🔑",
                                     image: keyPhoto || entry.image,
                                     remotes: entry.remotes,
                                     xhorse: entry.remotes.join(", "),
+                                    prox: entry.prox || false,
                                   };
                                   onAddToStock && onAddToStock(newProd);
                                   setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
