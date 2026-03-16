@@ -3240,21 +3240,34 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
 
                     {/* Photo */}
                     <div style={{ marginBottom:10 }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:"#6c63ff", letterSpacing:0.5, marginBottom:5, textTransform:"uppercase" }}>📷 Photo</div>
-                      <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:"#6c63ff", letterSpacing:0.5, marginBottom:5, textTransform:"uppercase" }}>📸 Photo</div>
+                      <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
                         <img src={dispImg || getSilcaImage(entry.ref) || getSilcaSVG(entry.blade)}
                           style={{ width:56, height:56, objectFit:"contain", borderRadius:8, background:"#e8edf8", flexShrink:0 }} />
-                        <label style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, background:"rgba(108,99,255,0.07)", border:"1px dashed rgba(108,99,255,0.3)", borderRadius:8, padding:"10px 0", cursor:"pointer", fontSize:11, color:"#6c63ff", fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-                          📂 Choisir une photo
-                          <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
-                            const file = e.target.files[0]; if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = ev => saveCardEdit(entry.ref, { image: ev.target.result });
-                            reader.readAsDataURL(file);
-                          }} />
-                        </label>
+                        <div style={{ flex:1 }}>
+                          <input
+                            type="text"
+                            placeholder="Colle l'URL de la page ou de la photo…"
+                            id={`img-url-${entry.ref}`}
+                            style={{ width:"100%", background:"#fff", border:"1px solid rgba(108,99,255,0.25)", borderRadius:8, padding:"8px 10px", fontSize:11, outline:"none", fontFamily:"'Plus Jakarta Sans',sans-serif", color:"#1a1d2e", boxSizing:"border-box" }} />
+                          <button onClick={async () => {
+                            const val = document.getElementById(`img-url-${entry.ref}`)?.value?.trim();
+                            if (!val) return;
+                            if (val.match(/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i)) {
+                              saveCardEdit(entry.ref, { image: val });
+                            } else {
+                              try {
+                                const r = await fetch("/api/image-produit", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ url: val }) });
+                                const d = await r.json();
+                                if (d.image) saveCardEdit(entry.ref, { image: d.image });
+                              } catch {}
+                            }
+                          }} style={{ marginTop:5, width:"100%", padding:"7px 0", borderRadius:8, border:"none", background:"linear-gradient(135deg,#6c63ff,#00d4ff)", color:"#fff", fontWeight:700, fontSize:11, cursor:"pointer" }}>
+                            📸 Appliquer la photo
+                          </button>
+                        </div>
                         {ed.image && <button onClick={() => saveCardEdit(entry.ref, { image: null })}
-                          style={{ fontSize:10, color:"#ff4757", background:"none", border:"none", cursor:"pointer", fontWeight:700 }}>↺</button>}
+                          style={{ fontSize:10, color:"#ff4757", background:"none", border:"none", cursor:"pointer", fontWeight:700, flexShrink:0 }}>↺</button>}
                       </div>
                     </div>
 
