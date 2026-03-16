@@ -4109,6 +4109,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
         freq: data.freq || prev.freq,
         transpondeur: data.transpondeur || prev.transpondeur,
         lame: data.lame || prev.lame,
+        image: data.image || prev.image || "",
       }));
       setAnalysed(true);
     } catch (e) {
@@ -4132,7 +4133,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
       transpondeur: form.transpondeur.trim(),
       lame: form.lame.trim(),
       emoji: "🔑",
-      image: FALLBACK_IMG,
+      image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
       oeLinks: form.lien.trim() ? [{ label: "Voir la page produit", url: form.lien.trim() }] : [],
     };
