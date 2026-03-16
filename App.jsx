@@ -172,16 +172,37 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
         </button>
       </div>
       {editingImage && (
-        <div style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)", padding: "10px 14px", display: "flex", gap: 8 }}>
-          <input ref={imageRef} defaultValue={p.image === FALLBACK_IMG ? "" : p.image}
-            placeholder="Colle l'URL de la photo ici…"
-            style={{ flex: 1, background: "#e8edf8", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 10, padding: "9px 12px", color: "#1a1d2e", fontSize: 12, outline: "none" }}
-            autoFocus inputMode="url" />
-          <button onClick={() => {
-            const url = imageRef.current?.value?.trim();
-            if (url && onUpdateImage) { onUpdateImage(p.id, url); setEditingImage(false); showFlash("image"); }
-          }} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>OK</button>
-          <button onClick={() => setEditingImage(false)} style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", cursor: "pointer" }}>✕</button>
+        <div style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)", padding: "12px 14px" }}>
+          <div style={{ fontSize: 11, color: "#5a6585", marginBottom: 8, fontWeight: 600 }}>
+            Colle l'URL de la page produit ou directement l'URL de la photo
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input ref={imageRef}
+              placeholder="https://www.fournisseur.fr/produit/..."
+              style={{ flex: 1, background: "#e8edf8", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 10, padding: "9px 12px", color: "#1a1d2e", fontSize: 12, outline: "none" }}
+              autoFocus inputMode="url" />
+            <button onClick={async () => {
+              const val = imageRef.current?.value?.trim();
+              if (!val) return;
+              // Si c'est une URL d'image directe (.jpg, .png, .webp)
+              if (val.match(/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i)) {
+                if (onUpdateImage) { onUpdateImage(p.id, val); setEditingImage(false); showFlash("image"); }
+              } else {
+                // C'est une URL de page — on appelle l'API
+                showFlash("loading");
+                try {
+                  const r = await fetch("/api/image-produit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: val }) });
+                  const d = await r.json();
+                  if (d.image && onUpdateImage) { onUpdateImage(p.id, d.image); setEditingImage(false); showFlash("image"); }
+                  else { showFlash("error"); }
+                } catch { showFlash("error"); }
+              }
+            }} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {flash === "loading" ? "⏳" : "📸 OK"}
+            </button>
+            <button onClick={() => setEditingImage(false)} style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", cursor: "pointer" }}>✕</button>
+          </div>
+          {flash === "error" && <div style={{ marginTop: 6, fontSize: 11, color: "#ff4757", fontWeight: 600 }}>⚠ Impossible de trouver la photo sur cette page</div>}
         </div>
       )}
       <div style={{ padding: 18, background: "#c8d0e8", borderRadius: "0 0 0 0" }}>
