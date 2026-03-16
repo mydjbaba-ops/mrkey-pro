@@ -95,16 +95,18 @@ const GoogleIcon = () => (
 // ============================================================
 // =================== DETAIL PAGE COMPONENT =================
 // ============================================================
-function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catColor, lienLabel, SEUIL_DEFAULT, onDelete, onUpdatePrix, onUpdateNom }) {
+function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catColor, lienLabel, SEUIL_DEFAULT, onDelete, onUpdatePrix, onUpdateNom, onUpdateImage }) {
   const qtyRef = useRef();
   const seuilRef = useRef();
   const prixRef = useRef();
   const nomRef = useRef();
   const refRef = useRef();
+  const imageRef = useRef();
   const [flash, setFlash] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingNom, setEditingNom] = useState(false);
   const [editingPrix, setEditingPrix] = useState(false);
+  const [editingImage, setEditingImage] = useState(false);
 
   const s = stock[p.id];
   const isInit = s?.init === true;
@@ -162,7 +164,26 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           )
         )}
       </div>
-      <img src={p.image} alt={p.nom} style={{ width: "100%", height: 190, objectFit: "contain", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.1)" }} onError={e => { e.target.src = FALLBACK_IMG; }} />
+      <div style={{ position: "relative" }}>
+        <img src={p.image} alt={p.nom} style={{ width: "100%", height: 190, objectFit: "contain", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.1)" }} onError={e => { e.target.src = FALLBACK_IMG; }} />
+        <button onClick={() => setEditingImage(v => !v)}
+          style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(108,99,255,0.85)", border: "none", borderRadius: 10, padding: "6px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", backdropFilter: "blur(4px)" }}>
+          📸 Changer la photo
+        </button>
+      </div>
+      {editingImage && (
+        <div style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)", padding: "10px 14px", display: "flex", gap: 8 }}>
+          <input ref={imageRef} defaultValue={p.image === FALLBACK_IMG ? "" : p.image}
+            placeholder="Colle l'URL de la photo ici…"
+            style={{ flex: 1, background: "#e8edf8", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 10, padding: "9px 12px", color: "#1a1d2e", fontSize: 12, outline: "none" }}
+            autoFocus inputMode="url" />
+          <button onClick={() => {
+            const url = imageRef.current?.value?.trim();
+            if (url && onUpdateImage) { onUpdateImage(p.id, url); setEditingImage(false); showFlash("image"); }
+          }} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>OK</button>
+          <button onClick={() => setEditingImage(false)} style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", cursor: "pointer" }}>✕</button>
+        </div>
+      )}
       <div style={{ padding: 18, background: "#c8d0e8", borderRadius: "0 0 0 0" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: catColor(p.categorie), textTransform: "uppercase", letterSpacing: 1 }}>{p.categorie}</div>
         {editingNom ? (
@@ -5476,6 +5497,11 @@ export default function App() {
               setProducts(prev => prev.map(p => p.id === id ? {...p, nom, ref} : p));
               setSelectedProduct(prev => prev ? {...prev, nom, ref} : prev);
               showToast("✅ Nom mis à jour !");
+            }}
+            onUpdateImage={(id, image) => {
+              setProducts(prev => prev.map(p => p.id === id ? {...p, image} : p));
+              setSelectedProduct(prev => prev ? {...prev, image} : prev);
+              showToast("✅ Photo mise à jour !");
             }}
           />
         )}
