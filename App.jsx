@@ -4073,14 +4073,49 @@ function InterventionForm({ clients, products, onSave, onClose, defaultClientId,
 const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
 
 // ============================================================
-// ============= AJOUT PRODUIT MANUEL (avec URL) ==============
+// ============= AJOUT PRODUIT AVEC ANALYSE URL ===============
 // ============================================================
 function UrlProductImport({ onProductCreated, onClose }) {
   const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
   const [form, setForm] = React.useState(empty);
-  const [urlError, setUrlError] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [analysed, setAnalysed] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState("");
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleAnalyse = async () => {
+    const url = form.lien.trim();
+    if (!url) return;
+    setLoading(true);
+    setErrorMsg("");
+    setAnalysed(false);
+    try {
+      const res = await fetch("/api/analyse-produit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
+      setForm(prev => ({
+        ...prev,
+        nom: data.nom || prev.nom,
+        ref: data.ref || prev.ref,
+        marque: data.marque || prev.marque,
+        modeles: data.modeles || prev.modeles,
+        prix: data.prix || prev.prix,
+        type: data.type || prev.type,
+        freq: data.freq || prev.freq,
+        transpondeur: data.transpondeur || prev.transpondeur,
+        lame: data.lame || prev.lame,
+      }));
+      setAnalysed(true);
+    } catch (e) {
+      setErrorMsg("Erreur réseau — vérifie ta connexion");
+    }
+    setLoading(false);
+  };
 
   const handleConfirm = () => {
     if (!form.nom.trim()) return;
@@ -4120,28 +4155,39 @@ function UrlProductImport({ onProductCreated, onClose }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 800, color: "#1a1d2e" }}>➕ Ajouter un produit</div>
-            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Remplis les infos — colle l'URL du produit pour t'y référer</div>
+            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Colle l'URL — l'IA remplit la fiche automatiquement</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#5a6585", fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
-        {/* Lien URL en avant */}
-        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, marginTop: 10 }}>
-          <label style={{ ...lbl, color: "#6c63ff" }}>🔗 URL de la page produit (optionnel)</label>
-          <input
-            value={form.lien}
-            onChange={e => { set("lien", e.target.value); setUrlError(false); }}
-            placeholder="https://www.fournisseur.fr/produit/..."
-            style={{ ...inp, background: "#fff" }}
-            autoFocus
-            inputMode="url"
-          />
-          {form.lien.trim() && (
-            <a href={form.lien.trim()} target="_blank" rel="noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 7, fontSize: 11, color: "#6c63ff", fontWeight: 600, textDecoration: "none" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-              Ouvrir le lien pour copier les infos →
-            </a>
+        {/* URL + bouton analyser */}
+        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, marginTop: 10 }}>
+          <label style={{ ...lbl, color: "#6c63ff" }}>🔗 URL de la page produit</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={form.lien}
+              onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); }}
+              onKeyDown={e => e.key === "Enter" && form.lien.trim() && handleAnalyse()}
+              placeholder="https://www.fournisseur.fr/produit/..."
+              style={{ ...inp, background: "#fff", flex: 1 }}
+              autoFocus
+              inputMode="url"
+            />
+            <button
+              onClick={handleAnalyse}
+              disabled={loading || !form.lien.trim()}
+              style={{ flexShrink: 0, padding: "10px 14px", borderRadius: 12, border: "none", background: loading ? "#a0a0a0" : "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: loading || !form.lien.trim() ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+              {loading
+                ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</>
+                : "🔍 Analyser"}
+            </button>
+          </div>
+          <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+          {errorMsg && (
+            <div style={{ marginTop: 8, background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#ff4757", fontWeight: 600 }}>⚠ {errorMsg}</div>
+          )}
+          {analysed && (
+            <div style={{ marginTop: 8, background: "rgba(0,245,147,0.08)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#00b87a", fontWeight: 600 }}>✅ Fiche remplie automatiquement — vérifie et complète si besoin</div>
           )}
         </div>
 
@@ -4166,8 +4212,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
           </div>
           <div style={row}>
             <label style={lbl}>Type</label>
-            <select value={form.type} onChange={e => set("type", e.target.value)}
-              style={{ ...inp, appearance: "none" }}>
+            <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp, appearance: "none" }}>
               {["Clé","Télécommande","Coque","Transpondeur","Lame","Accessoire"].map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
