@@ -5474,20 +5474,26 @@ export default function App() {
             setOeLinksOverrides={setOeLinksOverrides}
             onAddToStock={function(vp) {
               var newProd = {
+                ...vp,
                 id: vp.id,
                 nom: vp.nom,
-                lame: vp.lame || "",
-                transpondeur: vp.transpondeur || "",
-                freq: vp.freq || "433 MHz",
+                lame: vp.lame || vp.blade || "",
+                transpondeur: vp.transpondeur || vp.transponder || "",
+                freq: vp.freq || vp.frequence || "433 MHz",
                 type: vp.type || "Clé aftermarket",
-                ref: vp.ref,
-                marque: vp.marque || vp.marqueVehicule || vp.lame || "",
-                modeles: vp.modeles || "",
-                prix: 0,
-                categorie: "Stock",
-                emoji: "🔑",
+                ref: vp.ref || "",
+                marque: vp.marque || vp.marqueVehicule || "",
+                modeles: vp.modeles || vp.vehiculesCompatibles || "",
+                prix: vp.prix || 0,
+                categorie: vp.categorie || "Aftermarket France",
+                emoji: vp.emoji || "🔑",
                 image: vp.image || null,
                 xhorse: vp.xhorse || null,
+                remotes: vp.remotes || null,
+                prox: vp.prox || false,
+                lien: vp.lien || "",
+                oeLinks: vp.oeLinks || [],
+                notes: vp.notes || "",
               };
               setProducts(function(prev) {
                 if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
