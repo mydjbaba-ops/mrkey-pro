@@ -178,9 +178,9 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <input ref={imageRef}
+              type="text"
               placeholder="https://www.fournisseur.fr/produit/..."
-              style={{ flex: 1, background: "#e8edf8", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 10, padding: "9px 12px", color: "#1a1d2e", fontSize: 12, outline: "none" }}
-              autoFocus inputMode="url" />
+              style={{ flex: 1, background: "#e8edf8", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 10, padding: "9px 12px", color: "#1a1d2e", fontSize: 12, outline: "none" }} />
             <button onClick={async () => {
               const val = imageRef.current?.value?.trim();
               if (!val) return;
