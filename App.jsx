@@ -4073,6 +4073,142 @@ function InterventionForm({ clients, products, onSave, onClose, defaultClientId,
 const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
 
 // ============================================================
+// ============= AJOUT PRODUIT MANUEL (avec URL) ==============
+// ============================================================
+function UrlProductImport({ onProductCreated, onClose }) {
+  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
+  const [form, setForm] = React.useState(empty);
+  const [urlError, setUrlError] = React.useState(false);
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleConfirm = () => {
+    if (!form.nom.trim()) return;
+    const newProd = {
+      id: "manuel-" + Date.now(),
+      nom: form.nom.trim(),
+      ref: form.ref.trim() || ("REF-" + Date.now().toString().slice(-6)),
+      marque: form.marque.trim() || "Autre",
+      modeles: form.modeles.trim(),
+      prix: parseFloat(form.prix) || 0,
+      categorie: "Aftermarket France",
+      type: form.type || "Clé",
+      freq: form.freq.trim(),
+      transpondeur: form.transpondeur.trim(),
+      lame: form.lame.trim(),
+      emoji: "🔑",
+      image: FALLBACK_IMG,
+      lien: form.lien.trim(),
+      oeLinks: form.lien.trim() ? [{ label: "Voir la page produit", url: form.lien.trim() }] : [],
+    };
+    onProductCreated(newProd);
+  };
+
+  const inp = {
+    width: "100%", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.2)",
+    borderRadius: 12, padding: "10px 12px", color: "#1a1d2e", fontSize: 13,
+    outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box",
+  };
+  const lbl = { fontSize: 11, fontWeight: 600, color: "#5a6585", marginBottom: 4, display: "block" };
+  const row = { marginBottom: 11 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", zIndex: 600, display: "flex", alignItems: "flex-end" }}>
+      <div style={{ background: "#c8d0e8", borderRadius: "24px 24px 0 0", padding: "22px 20px 36px", width: "100%", maxHeight: "93vh", overflowY: "auto", boxShadow: "0 -8px 40px rgba(108,99,255,0.18)" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div>
+            <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 800, color: "#1a1d2e" }}>➕ Ajouter un produit</div>
+            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Remplis les infos — colle l'URL du produit pour t'y référer</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#5a6585", fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Lien URL en avant */}
+        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, marginTop: 10 }}>
+          <label style={{ ...lbl, color: "#6c63ff" }}>🔗 URL de la page produit (optionnel)</label>
+          <input
+            value={form.lien}
+            onChange={e => { set("lien", e.target.value); setUrlError(false); }}
+            placeholder="https://www.fournisseur.fr/produit/..."
+            style={{ ...inp, background: "#fff" }}
+            autoFocus
+            inputMode="url"
+          />
+          {form.lien.trim() && (
+            <a href={form.lien.trim()} target="_blank" rel="noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 7, fontSize: 11, color: "#6c63ff", fontWeight: 600, textDecoration: "none" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+              Ouvrir le lien pour copier les infos →
+            </a>
+          )}
+        </div>
+
+        {/* Champs produit */}
+        <div style={row}>
+          <label style={lbl}>Nom du produit *</label>
+          <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 4 boutons 433MHz" style={inp} />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={row}>
+            <label style={lbl}>Référence / SKU</label>
+            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: VA2-433-ID46" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Prix d'achat (€)</label>
+            <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Marque véhicule</label>
+            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Type</label>
+            <select value={form.type} onChange={e => set("type", e.target.value)}
+              style={{ ...inp, appearance: "none" }}>
+              {["Clé","Télécommande","Coque","Transpondeur","Lame","Accessoire"].map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div style={row}>
+            <label style={lbl}>Fréquence</label>
+            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433MHz" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Transpondeur</label>
+            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp} />
+          </div>
+        </div>
+
+        <div style={row}>
+          <label style={lbl}>Modèles compatibles</label>
+          <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo" style={inp} />
+        </div>
+
+        <div style={row}>
+          <label style={lbl}>Lame</label>
+          <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
+        </div>
+
+        {/* Boutons */}
+        <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+          <button onClick={onClose}
+            style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+            Annuler
+          </button>
+          <button onClick={handleConfirm} disabled={!form.nom.trim()}
+            style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: form.nom.trim() ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.3)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: form.nom.trim() ? "pointer" : "default" }}>
+            ✅ Créer la fiche produit
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // ========================= APP ==============================
 // ============================================================
 export default function App() {
@@ -4108,6 +4244,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [stockSearch, setStockSearch] = useState("");
   const [xhorseTab, setXhorseTab] = useState(false);
+  const [showUrlImport, setShowUrlImport] = useState(false);
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -4392,6 +4529,19 @@ export default function App() {
 
   const renderCatalogue = () => (
     <div style={S.page}>
+      {/* URL Import Banner */}
+      <div
+        onClick={() => setShowUrlImport(true)}
+        style={{ display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 16, padding: "12px 14px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🔗</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit manuellement</div>
+          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Crée une fiche et colle l'URL du fournisseur pour référence</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
       <div style={{ position: "relative", marginBottom: 12 }}>
         <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
         <input style={S.searchInput} placeholder="Nom, référence, marque, lame, transpondeur…"
@@ -5351,6 +5501,25 @@ export default function App() {
               <button style={{ width: "100%", marginTop: 12, padding: 11, background: "#e8edf8", border: "none", borderRadius: 10, color: "#5a6585", cursor: "pointer", fontWeight: 700 }} onClick={() => setShowHistory(null)}>Fermer</button>
             </div>
           </div>
+        )}
+        {showUrlImport && (
+          <UrlProductImport
+            onProductCreated={(newProd) => {
+              setProducts(prev => {
+                const updated = [newProd, ...prev];
+                return updated;
+              });
+              setStock(prev => ({
+                ...prev,
+                [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true },
+              }));
+              setShowUrlImport(false);
+              setSelectedProduct(newProd);
+              setPage("detail");
+              showToast("✅ Fiche produit créée depuis l'URL !");
+            }}
+            onClose={() => setShowUrlImport(false)}
+          />
         )}
       </div>
     </>
