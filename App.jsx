@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from "react";
 
 // ============================================================
@@ -59,6 +60,7 @@ const getNextNum = (type) => {
   } catch { return `${type}${Date.now().toString().slice(-6)}`; }
 };
 const PRODUCTS_KEY = "mrkey_products_v2";
+const CUSTOM_AM_KEY = "mrkey_custom_am_v1";
 const loadProducts = () => {
   try { const s = localStorage.getItem(PRODUCTS_KEY); return s ? JSON.parse(s) : []; } catch(e) { return []; }
 };
@@ -4187,7 +4189,7 @@ const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http:
 // ============================================================
 // =================== AFTERMARKET TAB =======================
 // ============================================================
-function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlImport, oeLinksOverrides, S }) {
+function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlImport, oeLinksOverrides, S, customItems = [], onDeleteCustom }) {
   const [search, setSearch] = React.useState("");
   const [filterMarque, setFilterMarque] = React.useState("");
   const [openRef, setOpenRef] = React.useState(null);
@@ -4278,7 +4280,58 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
           ))}
         </div>
 
-        <div style={{ fontSize: 11, color: "#8890aa", marginBottom: 8 }}>{filtered.length} référence{filtered.length !== 1 ? "s" : ""}</div>
+        <div style={{ fontSize: 11, color: "#8890aa", marginBottom: 8 }}>{filtered.length} référence{filtered.length !== 1 ? "s" : ""} catalogue</div>
+
+        {/* ── Fiches ajoutées manuellement (par URL) ── */}
+        {customItems.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#6c63ff", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+              🔗 Ajoutés par URL ({customItems.length})
+            </div>
+            {customItems.map(p => {
+              const inStock = products.some(x => x.id === p.id);
+              return (
+                <div key={p.id} style={{ background: "#e8edf8", borderRadius: 16, marginBottom: 8, border: `1px solid ${inStock ? "rgba(0,245,147,0.3)" : "rgba(108,99,255,0.2)"}`, overflow: "hidden" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px 10px 10px" }}>
+                    {/* Photo */}
+                    <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#c8d0e8", border: "1px solid rgba(108,99,255,0.1)" }}>
+                      {p.image
+                        ? <img src={p.image} alt={p.nom} style={{ width: "100%", height: "100%", objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} />
+                        : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🔑</div>
+                      }
+                    </div>
+                    {/* Infos */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 3 }}>
+                        {p.ref && <span style={{ fontSize: 11, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", padding: "2px 8px", borderRadius: 5 }}>{p.ref}</span>}
+                        {inStock && <span style={{ fontSize: 9, fontWeight: 800, color: "#00b87a", background: "rgba(0,245,147,0.12)", border: "1px solid rgba(0,245,147,0.3)", padding: "1px 6px", borderRadius: 4 }}>✓ STOCK</span>}
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e", lineHeight: 1.4, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
+                      {(p.marque || p.lame) && <div style={{ fontSize: 10, color: "#8890aa" }}>{p.marque}{p.lame ? ` · Lame ${p.lame}` : ""}{p.freq ? ` · ${p.freq}` : ""}</div>}
+                      {p.modeles && <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🚗 {p.modeles}</div>}
+                    </div>
+                    {/* Boutons */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                      <button
+                        onClick={() => inStock ? onViewStock() : onAddToStock(p)}
+                        style={{ padding: "8px 10px", borderRadius: 10, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", lineHeight: 1.3, textAlign: "center",
+                          background: inStock ? "rgba(0,245,147,0.12)" : "linear-gradient(135deg,#0284c7,#00d4ff)",
+                          color: inStock ? "#00b87a" : "#fff" }}>
+                        {inStock ? "📦\nStock" : "+ Ajouter\nau stock"}
+                      </button>
+                      {onDeleteCustom && (
+                        <button onClick={() => onDeleteCustom(p.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#ff4757", fontSize: 11, padding: "2px 4px" }}>
+                          🗑
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "30px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat</div>
@@ -4626,6 +4679,9 @@ export default function App() {
   const [toast, setToast] = useState(null);
 
   const [xhorseTab, setXhorseTab] = useState(false);
+  const [customAftermarket, setCustomAftermarket] = useState(() => {
+    try { const s = localStorage.getItem(CUSTOM_AM_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
   const [showUrlImport, setShowUrlImport] = useState(false);
 
   function showToast(msg, type = "success") {
@@ -4688,6 +4744,7 @@ export default function App() {
   useEffect(() => { try { localStorage.setItem(INTERV_KEY, JSON.stringify(interventions)); } catch (e) {} }, [interventions]);
   useEffect(() => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {} }, [settings]);
   useEffect(() => { try { localStorage.setItem(OE_LINKS_KEY, JSON.stringify(oeLinksOverrides)); } catch (e) {} }, [oeLinksOverrides]);
+  useEffect(() => { try { localStorage.setItem(CUSTOM_AM_KEY, JSON.stringify(customAftermarket)); } catch (e) {} }, [customAftermarket]);
 
   // Badge color per category
   const catColor = (cat) => {
@@ -5580,8 +5637,13 @@ export default function App() {
     return <AftermarketTab
       stock={stock}
       products={products}
-      setProducts={setProducts}
-      setStock={setStock}
+      customItems={customAftermarket}
+      onDeleteCustom={(id) => {
+        setCustomAftermarket(prev => prev.filter(p => p.id !== id));
+        setProducts(prev => prev.filter(p => p.id !== id));
+        setStock(prev => { const n = {...prev}; delete n[id]; return n; });
+        showToast("🗑 Fiche supprimée");
+      }}
       oeLinksOverrides={oeLinksOverrides}
       onAddToStock={(newProd) => {
         setProducts(prev => prev.some(p => p.id === newProd.id) ? prev : [...prev, newProd]);
@@ -5853,18 +5915,17 @@ export default function App() {
         {showUrlImport && (
           <UrlProductImport
             onProductCreated={(newProd) => {
-              setProducts(prev => {
-                const updated = [newProd, ...prev];
-                return updated;
-              });
+              // Ajoute dans le catalogue Aftermarket custom (visible dans l'onglet)
+              setCustomAftermarket(prev => [newProd, ...prev]);
+              // Ajoute aussi dans products + stock (avec init:true = qté à saisir)
+              setProducts(prev => [newProd, ...prev]);
               setStock(prev => ({
                 ...prev,
                 [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true },
               }));
               setShowUrlImport(false);
-              setSelectedProduct(newProd);
-              setPage("detail");
-              showToast("✅ Fiche produit créée depuis l'URL !");
+              setPage("aftermarket");
+              showToast("✅ Fiche créée dans Aftermarket !");
             }}
             onClose={() => setShowUrlImport(false)}
           />
