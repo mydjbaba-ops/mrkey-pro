@@ -4193,6 +4193,7 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
   const [search, setSearch] = React.useState("");
   const [filterMarque, setFilterMarque] = React.useState("");
   const [openRef, setOpenRef] = React.useState(null);
+  const [openCustomId, setOpenCustomId] = React.useState(null);
 
   const marques = React.useMemo(() => [...new Set(SILCA_DB.map(e => e.marque))].sort(), []);
 
@@ -4290,18 +4291,34 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
             </div>
             {customItems.map(p => {
               const inStock = products.some(x => x.id === p.id);
+              const isOpen = openCustomId === p.id;
+              const fields = [
+                ["Type télécommande", p.mainLibre === "oui" ? "MAINS LIBRES" : p.mainLibre === "non" ? "NON MAINS LIBRES" : ""],
+                ["Nb boutons", p.boutons],
+                ["Transpondeur", p.transpondeur],
+                ["PCF", p.pcf],
+                ["Fréquence", p.freq],
+                ["Pile", p.pile],
+                ["Lame", p.lame],
+                ["EAN", p.ean],
+                ["Réf. origine", p.refOrigine],
+                ["Années", p.annees],
+                ["Modèles", p.modeles],
+              ].filter(([, v]) => v);
               return (
-                <div key={p.id} style={{ background: "#e8edf8", borderRadius: 16, marginBottom: 8, border: `1px solid ${inStock ? "rgba(0,245,147,0.3)" : "rgba(108,99,255,0.2)"}`, overflow: "hidden" }}>
+                <div key={p.id} style={{ background: "#e8edf8", borderRadius: 16, marginBottom: 8, border: `1px solid ${isOpen ? "rgba(108,99,255,0.3)" : inStock ? "rgba(0,245,147,0.3)" : "rgba(108,99,255,0.2)"}`, overflow: "hidden", transition: "border-color 0.15s" }}>
+                  {/* Ligne principale */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px 10px 10px" }}>
-                    {/* Photo */}
-                    <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#c8d0e8", border: "1px solid rgba(108,99,255,0.1)" }}>
-                      {p.image
+                    {/* Photo — cliquable */}
+                    <div onClick={() => setOpenCustomId(isOpen ? null : p.id)}
+                      style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#c8d0e8", border: "1px solid rgba(108,99,255,0.1)", cursor: "pointer" }}>
+                      {p.image && p.image !== FALLBACK_IMG
                         ? <img src={p.image} alt={p.nom} style={{ width: "100%", height: "100%", objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} />
                         : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🔑</div>
                       }
                     </div>
-                    {/* Infos */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Infos — cliquables */}
+                    <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setOpenCustomId(isOpen ? null : p.id)}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 3 }}>
                         {p.ref && <span style={{ fontSize: 11, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", padding: "2px 8px", borderRadius: 5 }}>{p.ref}</span>}
                         {inStock && <span style={{ fontSize: 9, fontWeight: 800, color: "#00b87a", background: "rgba(0,245,147,0.12)", border: "1px solid rgba(0,245,147,0.3)", padding: "1px 6px", borderRadius: 4 }}>✓ STOCK</span>}
@@ -4310,23 +4327,47 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                       {(p.marque || p.lame) && <div style={{ fontSize: 10, color: "#8890aa" }}>{p.marque}{p.lame ? ` · Lame ${p.lame}` : ""}{p.freq ? ` · ${p.freq}` : ""}</div>}
                       {p.modeles && <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🚗 {p.modeles}</div>}
                     </div>
-                    {/* Boutons */}
+                    {/* Boutons + chevron */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                      <button
-                        onClick={() => inStock ? onViewStock() : onAddToStock(p)}
+                      <button onClick={() => inStock ? onViewStock() : onAddToStock(p)}
                         style={{ padding: "8px 10px", borderRadius: 10, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", lineHeight: 1.3, textAlign: "center",
                           background: inStock ? "rgba(0,245,147,0.12)" : "linear-gradient(135deg,#0284c7,#00d4ff)",
                           color: inStock ? "#00b87a" : "#fff" }}>
                         {inStock ? "📦\nStock" : "+ Ajouter\nau stock"}
                       </button>
-                      {onDeleteCustom && (
-                        <button onClick={() => onDeleteCustom(p.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "#ff4757", fontSize: 11, padding: "2px 4px" }}>
-                          🗑
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {onDeleteCustom && (
+                          <button onClick={() => onDeleteCustom(p.id)}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#ff4757", fontSize: 11, padding: "2px 4px" }}>🗑</button>
+                        )}
+                        <button onClick={() => setOpenCustomId(isOpen ? null : p.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8890aa", padding: "2px 4px", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none", display: "flex", alignItems: "center" }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Panneau déplié */}
+                  {isOpen && (
+                    <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "12px 14px", background: "rgba(108,99,255,0.03)" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Fiche technique</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                        {fields.map(([label, value]) => (
+                          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#e8edf8", borderRadius: 10, border: "1px solid rgba(108,99,255,0.08)" }}>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: "#8890aa", minWidth: 100, flexShrink: 0 }}>{label}</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {p.lien && (
+                        <a href={p.lien} target="_blank" rel="noopener noreferrer"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 10, fontSize: 11, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 8, padding: "5px 12px", textDecoration: "none" }}>
+                          🔗 Voir la page fournisseur
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
