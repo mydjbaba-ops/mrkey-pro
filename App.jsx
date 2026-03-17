@@ -4522,6 +4522,15 @@ export default function App() {
     return { totalRefs, okCount, alertCount, valeurStock, budgetCommande };
   }, [stock, lowStockProducts, products]);
 
+  // Nettoyage au démarrage : purger les entrées stock init:true
+  useEffect(() => {
+    setStock(prev => {
+      const cleaned = {};
+      Object.entries(prev).forEach(([id, s]) => { if (!s.init) cleaned[id] = s; });
+      return cleaned;
+    });
+  }, []); // eslint-disable-line
+
   // Persist stock to localStorage on every change
   useEffect(() => {
     try { localStorage.setItem(STOCK_KEY, JSON.stringify(stock)); } catch (e) {}
