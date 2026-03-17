@@ -4258,57 +4258,29 @@ function UrlProductImport({ onProductCreated, onClose }) {
     setErrorMsg("");
     setAnalysed(false);
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/analyse-produit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{
-            role: "user",
-            content: `Visite cette page produit de clé automobile : ${url}
-Extrais TOUTES les informations suivantes et réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown :
-{
-  "nom": "nom complet du produit",
-  "ref": "référence SKU du produit",
-  "prix": "prix en chiffres uniquement (ex: 24.99)",
-  "marque": "marque du véhicule (ex: Peugeot, Renault, BMW...)",
-  "type": "un parmi : Clé, Télécommande, Coque, Transpondeur, Lame, Accessoire",
-  "freq": "fréquence (ex: 433MHz, 868MHz)",
-  "transpondeur": "type de transpondeur (ex: ID46, ID48, PCF7941)",
-  "lame": "profil de lame (ex: VA2, HU83, SIP22)",
-  "pile": "type de pile (ex: CR2032, CR2016)",
-  "modeles": "modèles de véhicules compatibles séparés par des virgules",
-  "image": "URL directe de la photo principale du produit"
-}`
-          }]
-        })
+        body: JSON.stringify({ url }),
       });
-      const data = await response.json();
-      const textBlock = data.content && data.content.find(b => b.type === "text");
-      if (!textBlock) throw new Error("Pas de réponse");
-      const clean = textBlock.text.replace(/```json|```/g, "").trim();
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("Format invalide");
-      const d = JSON.parse(jsonMatch[0]);
+      const data = await res.json();
+      if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
       setForm(prev => ({
         ...prev,
-        nom: d.nom || prev.nom,
-        ref: d.ref || prev.ref,
-        marque: d.marque || prev.marque,
-        modeles: d.modeles || prev.modeles,
-        prix: d.prix || prev.prix,
-        type: d.type || prev.type,
-        freq: d.freq || prev.freq,
-        transpondeur: d.transpondeur || prev.transpondeur,
-        lame: d.lame || prev.lame,
-        pile: d.pile || prev.pile || "",
-        image: d.image || prev.image || "",
+        nom: data.nom || prev.nom,
+        ref: data.ref || prev.ref,
+        marque: data.marque || prev.marque,
+        modeles: data.modeles || prev.modeles,
+        prix: data.prix || prev.prix,
+        type: data.type || prev.type,
+        freq: data.freq || prev.freq,
+        transpondeur: data.transpondeur || prev.transpondeur,
+        lame: data.lame || prev.lame,
+        image: data.image || prev.image || "",
       }));
       setAnalysed(true);
     } catch (e) {
-      setErrorMsg("Erreur d'analyse — vérifie l'URL ou remplis manuellement");
+      setErrorMsg("Erreur réseau — vérifie ta connexion");
     }
     setLoading(false);
   };
