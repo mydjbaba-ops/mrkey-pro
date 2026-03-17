@@ -3617,14 +3617,18 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
         id: existingId,
         nom: veh.marque + " " + veh.modele + " - Lame " + lame,
         lame: lame,
+        marque: veh.marque,
         marqueVehicule: veh.marque,
+        modeles: veh.modele || "",
         transpondeur: veh.transpondeur,
         freq: veh.freq || "433 MHz",
         type: "Clé aftermarket",
+        categorie: "Aftermarket France",
         ref: lame + "-" + veh.marque.replace(/[^A-Za-z]/g,"").toUpperCase().slice(0,4),
         prix: 0,
         isVirtual: true,
         emoji: "🔑",
+        image: getKeyImage(lame) || null,
       };
     });
     // Merge: produits en stock d'abord, puis virtuels non encore en stock
@@ -3693,11 +3697,11 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                 + Intervention
               </button>
             : <div style={{ display: "flex", gap: 5, flex: 1 }}>
-                <button onClick={function() { onAddToCatalogue && onAddToCatalogue({ ...p, image: p.image || getKeyImage(p.lame) }); }}
+                <button onClick={function() { onAddToCatalogue && onAddToCatalogue({ ...p, image: p.image || getKeyImage(p.lame) || null }); }}
                   style={{ flex: 1, padding: "9px 4px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.3)", background: "transparent", color: "#6c63ff", fontWeight: 700, fontSize: 10, cursor: "pointer" }}>
                   📋 Catalogue
                 </button>
-                <button onClick={function() { onAddToStock && onAddToStock({ ...p, image: p.image || getKeyImage(p.lame) }); }}
+                <button onClick={function() { onAddToStock && onAddToStock({ ...p, image: p.image || getKeyImage(p.lame) || null }); }}
                   style={{ flex: 1, padding: "9px 4px", borderRadius: 10, border: "none", background: grad1, color: "#fff", fontWeight: 700, fontSize: 10, cursor: "pointer" }}>
                   📦 Stock
                 </button>
