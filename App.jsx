@@ -77,20 +77,7 @@ const Icon = ({ d, size = 20 }) => (
 );
 const SearchIcon = () => <Icon d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />;
 const KeyIcon = () => <Icon d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />;
-const AlertIcon = () => <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01" />;
-const PlusIcon = () => <Icon d="M12 5v14M5 12h14" />;
-const MinusIcon = () => <Icon d="M5 12h14" />;
-const BackIcon = () => <Icon d="M19 12H5M12 5l-7 7 7 7" />;
-const HistoryIcon = () => <Icon d="M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-3M3 4v4h4" />;
-const LinkIcon = () => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />;
-const GoogleIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-  </svg>
-);
+
 
 // ============================================================
 // =================== DETAIL PAGE COMPONENT =================
@@ -148,7 +135,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   return (
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 15px", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.12)" }}>
-        <button onClick={() => setPage("catalogue")} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
+        <button onClick={() => setPage("home")} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
           <DIcon d="M19 12H5M12 5l-7 7 7 7" /> Retour
         </button>
         <div style={{ flex: 1 }} />
@@ -156,7 +143,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           showDeleteConfirm ? (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#ff4757", fontWeight: 600 }}>Confirmer ?</span>
-              <button onClick={() => { onDelete(p.id); setPage("catalogue"); }} style={{ background: "#ff4757", border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Oui</button>
+              <button onClick={() => { onDelete(p.id); setPage("home"); }} style={{ background: "#ff4757", border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Oui</button>
               <button onClick={() => setShowDeleteConfirm(false)} style={{ background: "none", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 8, padding: "5px 10px", color: "#5a6585", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>Non</button>
             </div>
           ) : (
@@ -4405,14 +4392,12 @@ function UrlProductImport({ onProductCreated, onClose }) {
 // ============================================================
 export default function App() {
   const [page, setPage] = useState("home");
-  const [categorie, setCategorie] = useState("aftermarket");
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState(loadProducts);
   const [stock, setStock] = useState(initStock);
   const [showHistory, setShowHistory] = useState(null);
 
-  const [marqueFilter, setMarqueFilter] = useState("all");
   const [clients, setClients] = useState(() => { try { const s = localStorage.getItem(CLIENT_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
   const [interventions, setInterventions] = useState(() => { try { const s = localStorage.getItem(INTERV_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
   const [settings, setSettings] = useState(() => { try { const s = localStorage.getItem(SETTINGS_KEY); return s ? JSON.parse(s) : { nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" }; } catch { return { nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" }; } });
@@ -4443,30 +4428,19 @@ export default function App() {
     setTimeout(() => setToast(null), 2800);
   }
 
-  const aftermarketBrands = useMemo(() => {
-    return [...new Set(products.map(p => p.marque))].sort();
-  }, [products]);
-
   const filtered = useMemo(() => {
-    let list = products;
-    if (categorie === "aftermarket") {
-      list = list.filter(p => p.categorie === "Aftermarket France");
-      if (marqueFilter !== "all") list = list.filter(p => p.marque === marqueFilter);
-    } else if (categorie === "xhorse") list = list.filter(p => p.categorie === "Xhorse");
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(p =>
-        p.nom.toLowerCase().includes(q) ||
-        p.ref.toLowerCase().includes(q) ||
-        p.marque.toLowerCase().includes(q) ||
-        (p.modeles && p.modeles.toLowerCase().includes(q)) ||
-        (p.lame && p.lame.toLowerCase().includes(q)) ||
-        (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
-        (p.type && p.type.toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [categorie, search, marqueFilter, products]);
+    if (!search.trim()) return products;
+    const q = search.toLowerCase();
+    return products.filter(p =>
+      p.nom.toLowerCase().includes(q) ||
+      p.ref.toLowerCase().includes(q) ||
+      p.marque.toLowerCase().includes(q) ||
+      (p.modeles && p.modeles.toLowerCase().includes(q)) ||
+      (p.lame && p.lame.toLowerCase().includes(q)) ||
+      (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
+      (p.type && p.type.toLowerCase().includes(q))
+    );
+  }, [search, products]);
 
   const lowStockProducts = useMemo(() =>
     products.filter(p => {
@@ -4647,7 +4621,6 @@ export default function App() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-
         <div onClick={() => setPage("clients")}
           style={{ background: "#e8edf8", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(96,165,250,0.3)", cursor: "pointer" }}>
           <div style={{ fontSize: 20, marginBottom: 6 }}>👤</div>
@@ -4666,113 +4639,36 @@ export default function App() {
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Devis</div>
           <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{devis.length} devis</div>
         </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         <div onClick={() => setPage("stats")}
-          style={{ flex: 1, background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.04))", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,99,255,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 18 }}>📊</div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>Statistiques</div>
-            <div style={{ fontSize: 10, color: "#5a6585" }}>{interventions.length} interventions</div>
-          </div>
+          style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.04))", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(108,99,255,0.15)", cursor: "pointer" }}>
+          <div style={{ fontSize: 20, marginBottom: 6 }}>📊</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Statistiques</div>
+          <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{interventions.length} intervention{interventions.length !== 1 ? "s" : ""}</div>
         </div>
         <div onClick={() => setPage("settings")}
-          style={{ flex: 1, background: "#e8edf8", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,99,255,0.12)", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 18 }}>⚙️</div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>Paramètres</div>
-            <div style={{ fontSize: 10, color: "#5a6585" }}>{settings.nom || "Non configuré"}</div>
+          style={{ background: "#e8edf8", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(108,99,255,0.12)", cursor: "pointer", gridColumn: "span 2" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 20 }}>⚙️</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Paramètres</div>
+              <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2 }}>{settings.nom || "Non configuré"}</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a6585" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
         </div>
       </div>
 
-      <div style={S.sectionTitle}>Recherche par reference</div>
+      <div style={S.sectionTitle}>Recherche par référence</div>
       <div style={{ position: "relative", marginBottom: 10 }}>
         <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
-        <input style={S.searchInput} placeholder="Reference, lame, transpondeur…"
+        <input style={S.searchInput} placeholder="Référence, lame, transpondeur…"
           value={search} onChange={e => setSearch(e.target.value)} />
+        {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#5a6585", fontSize: 16 }}>✕</button>}
       </div>
-    </div>
-  );
-
-  const renderCatalogue = () => (
-    <div style={S.page}>
-      {/* URL Import Banner */}
-      <div
-        onClick={() => setShowUrlImport(true)}
-        style={{ display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 16, padding: "12px 14px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🔗</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit manuellement</div>
-          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Crée une fiche et colle l'URL du fournisseur pour référence</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-
-      <div style={{ position: "relative", marginBottom: 12 }}>
-        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
-        <input style={S.searchInput} placeholder="Nom, référence, marque, lame, transpondeur…"
-          value={search} onChange={e => setSearch(e.target.value)} autoFocus />
-      </div>
-      <div style={S.catRow}>
-        {[
-          { key: "aftermarket", label: "🇫🇷 Aftermarket" },
-          { key: "xhorse", label: "🔧 Xhorse" },
-        ].map(c => <button key={c.key} style={S.catBtn(categorie === c.key)} onClick={() => { setCategorie(c.key); setMarqueFilter("all"); }}>{c.label}</button>)}
-      </div>
-
-      {categorie === "aftermarket" && (
-        <div style={{ ...S.catRow, marginTop: -4, paddingBottom: 6, borderBottom: "1px solid #1e2535" }}>
-          <button style={{ ...S.catBtn(marqueFilter === "all"), fontSize: 10 }} onClick={() => setMarqueFilter("all")}>Toutes</button>
-          {aftermarketBrands.map(m => (
-            <button key={m} style={{ ...S.catBtn(marqueFilter === m), fontSize: 10 }} onClick={() => setMarqueFilter(m)}>{m}</button>
-          ))}
-        </div>
-      )}
-
-      <div style={{ fontSize: 11, color: "#5a6585", marginBottom: 10 }}>{filtered.length} résultat{filtered.length > 1 ? "s" : ""}</div>
-
-      {(categorie === "aftermarket" && marqueFilter === "all" && !search.trim()) ? (
-        (() => {
-          const grouped = {};
-          filtered.forEach(p => {
-            if (!grouped[p.marque]) grouped[p.marque] = [];
-            grouped[p.marque].push(p);
-          });
-          return Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b)).map(([marque, prods]) => {
-            const alertsInBrand = prods.filter(p => {
-              const s = stock[p.id];
-              return !s?.init && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
-            }).length;
-            return (
-            <div key={marque}>
-              <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11, fontWeight: 800, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1.8, padding: "14px 4px 8px", borderBottom: "1px solid rgba(108,99,255,0.12)", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span>🚗 {marque} <span style={{ color: "#3d4870", fontWeight: 600 }}>({prods.length})</span></span>
-                {alertsInBrand > 0 && <span style={{ background: "rgba(255,71,87,0.12)", color: "#ff4757", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 12, border: "1px solid rgba(255,71,87,0.25)" }}>⚠ {alertsInBrand}</span>}
-              </div>
-              {prods.map(p => {
-                const s = stock[p.id];
-                const isInit = s?.init;
-                const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
-                return (
-                  <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
-                    <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
-                    <div style={S.cardBody}>
-                      <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
-                      <div style={S.cardName}>{p.nom}</div>
-                      <div style={S.cardRef}>{p.ref}</div>
-                      <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );})
-        })()
-      ) : (
-        filtered.map(p => {
+      {search.trim() && (
+        filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat pour « {search} »</div>
+        ) : filtered.map(p => {
           const s = stock[p.id];
           const isInit = s?.init;
           const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
@@ -5177,7 +5073,7 @@ export default function App() {
 
     const exportBackup = () => {
       const data = {
-        version: "MrKey-v10",
+
         date: new Date().toISOString(),
         products, stock, clients, interventions, devis, settings
       };
@@ -5408,7 +5304,7 @@ export default function App() {
               <div style={S.logoIcon}><KeyIcon /></div>
               <div style={{ flex: 1 }}>
                 <div style={S.logoText}>MrKey <span style={{ background: "linear-gradient(90deg,#6c63ff,#00d4ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Pro</span></div>
-                <div style={S.logoSub}>{products.length} réf · {clients.length} clients · <span style={{ color: "#6c63ff", fontWeight: 700 }}>v10</span></div>
+                <div style={S.logoSub}>{products.length} </div>
               </div>
 
             </div>
