@@ -4292,24 +4292,25 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
             {customItems.map(p => {
               const inStock = products.some(x => x.id === p.id);
               const isOpen = openCustomId === p.id;
-              const fields = [
-                ["Type télécommande", p.mainLibre === "oui" ? "MAINS LIBRES" : p.mainLibre === "non" ? "NON MAINS LIBRES" : ""],
-                ["Nb boutons", p.boutons],
-                ["Transpondeur", p.transpondeur],
-                ["PCF", p.pcf],
-                ["Fréquence", p.freq],
-                ["Pile", p.pile],
-                ["Lame", p.lame],
-                ["EAN", p.ean],
-                ["Réf. origine", p.refOrigine],
-                ["Années", p.annees],
-                ["Modèles", p.modeles],
-              ].filter(([, v]) => v);
+              // Champs techniques pour le panneau déplié
+              const techPills = [
+                p.mainLibre === "oui" ? "🖐 Mains libres" : p.mainLibre === "non" ? "🔒 Non mains libres" : null,
+                p.boutons ? `🔢 ${p.boutons} bouton${p.boutons > 1 ? "s" : ""}` : null,
+                p.transpondeur ? `🔐 ${p.transpondeur}${p.pcf ? " / PCF" + p.pcf : ""}` : null,
+                p.freq ? `📡 ${p.freq}` : null,
+                p.pile ? `🔋 ${p.pile}` : null,
+                p.lame ? `🔑 Lame ${p.lame}` : null,
+              ].filter(Boolean);
+              const metaPills = [
+                p.ean ? `EAN ${p.ean}` : null,
+                p.refOrigine ? `Réf. origine : ${p.refOrigine}` : null,
+              ].filter(Boolean);
               return (
                 <div key={p.id} style={{ background: "#e8edf8", borderRadius: 16, marginBottom: 8, border: `1px solid ${isOpen ? "rgba(108,99,255,0.3)" : inStock ? "rgba(0,245,147,0.3)" : "rgba(108,99,255,0.2)"}`, overflow: "hidden", transition: "border-color 0.15s" }}>
-                  {/* Ligne principale */}
+
+                  {/* ── Ligne principale ── */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px 10px 10px" }}>
-                    {/* Photo — cliquable */}
+                    {/* Photo cliquable */}
                     <div onClick={() => setOpenCustomId(isOpen ? null : p.id)}
                       style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#c8d0e8", border: "1px solid rgba(108,99,255,0.1)", cursor: "pointer" }}>
                       {p.image && p.image !== FALLBACK_IMG
@@ -4317,7 +4318,7 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                         : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🔑</div>
                       }
                     </div>
-                    {/* Infos — cliquables */}
+                    {/* Infos cliquables */}
                     <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setOpenCustomId(isOpen ? null : p.id)}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 3 }}>
                         {p.ref && <span style={{ fontSize: 11, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", padding: "2px 8px", borderRadius: 5 }}>{p.ref}</span>}
@@ -4335,34 +4336,62 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                           color: inStock ? "#00b87a" : "#fff" }}>
                         {inStock ? "📦\nStock" : "+ Ajouter\nau stock"}
                       </button>
-                      <div style={{ display: "flex", gap: 4 }}>
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                         {onDeleteCustom && (
                           <button onClick={() => onDeleteCustom(p.id)}
                             style={{ background: "none", border: "none", cursor: "pointer", color: "#ff4757", fontSize: 11, padding: "2px 4px" }}>🗑</button>
                         )}
                         <button onClick={() => setOpenCustomId(isOpen ? null : p.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8890aa", padding: "2px 4px", transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none", display: "flex", alignItems: "center" }}>
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8890aa", padding: "2px 4px", display: "flex", alignItems: "center", transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Panneau déplié */}
+                  {/* ── Panneau déplié ── */}
                   {isOpen && (
-                    <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "12px 14px", background: "rgba(108,99,255,0.03)" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Fiche technique</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                        {fields.map(([label, value]) => (
-                          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#e8edf8", borderRadius: 10, border: "1px solid rgba(108,99,255,0.08)" }}>
-                            <span style={{ fontSize: 10, fontWeight: 600, color: "#8890aa", minWidth: 100, flexShrink: 0 }}>{label}</span>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{value}</span>
+                    <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "14px 14px 12px", background: "rgba(108,99,255,0.025)" }}>
+                      {/* Modèles / années */}
+                      {(p.modeles || p.annees) && (
+                        <>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: "#3d4870", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
+                            Véhicules compatibles
                           </div>
-                        ))}
-                      </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 12 }}>
+                            {p.modeles.split(/[,;]+/).map((m, i) => m.trim()).filter(Boolean).map((m, i) => (
+                              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", background: "#e8edf8", borderRadius: 12, border: "1px solid rgba(108,99,255,0.07)" }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>{m}</span>
+                                {p.annees && i === 0 && (
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.1)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", marginLeft: 8 }}>
+                                    {p.annees}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {/* Pills techniques */}
+                      {techPills.length > 0 && (
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: metaPills.length ? 8 : 0 }}>
+                          {techPills.map((pill, i) => (
+                            <span key={i} style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>{pill}</span>
+                          ))}
+                        </div>
+                      )}
+                      {/* EAN + Réf. origine */}
+                      {metaPills.length > 0 && (
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                          {metaPills.map((pill, i) => (
+                            <span key={i} style={{ fontSize: 10, fontWeight: 600, color: "#8890aa", background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.1)", borderRadius: 20, padding: "4px 10px" }}>{pill}</span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Lien fournisseur */}
                       {p.lien && (
                         <a href={p.lien} target="_blank" rel="noopener noreferrer"
-                          style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 10, fontSize: 11, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 8, padding: "5px 12px", textDecoration: "none" }}>
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 10, fontSize: 11, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 20, padding: "5px 12px", textDecoration: "none" }}>
                           🔗 Voir la page fournisseur
                         </a>
                       )}
@@ -4440,39 +4469,46 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 
               {/* ── Détail déplié ── */}
               {isOpen && (
-                <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "12px 14px", background: "rgba(108,99,255,0.03)" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "14px 14px 12px", background: "rgba(108,99,255,0.025)" }}>
+                  {/* Titre nb véhicules */}
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#3d4870", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10 }}>
                     {entry.applications.length} véhicule{entry.applications.length > 1 ? "s" : ""} compatible{entry.applications.length > 1 ? "s" : ""}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {/* Liste véhicules */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 12 }}>
                     {entry.applications.map((a, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#e8edf8", borderRadius: 10, border: "1px solid rgba(108,99,255,0.08)" }}>
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{a.make} {a.model}</span>
-                          {a.chassis && <span style={{ fontSize: 10, color: "#8890aa", marginLeft: 6 }}>{a.chassis}</span>}
+                      <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", background: "#e8edf8", borderRadius: 12, border: "1px solid rgba(108,99,255,0.07)" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>{a.make} {a.model}</span>
+                          {a.chassis && <span style={{ fontSize: 10, color: "#8890aa", marginLeft: 7, fontWeight: 500 }}>{a.chassis}</span>}
+                          {a.note && <span style={{ fontSize: 9, color: "#6c63ff", marginLeft: 6, fontStyle: "italic" }}>{a.note}</span>}
                         </div>
                         {(a.from || a.to) && (
-                          <span style={{ fontSize: 10, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.1)", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.1)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0, marginLeft: 8 }}>
                             {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
                           </span>
                         )}
-                        {a.note && <span style={{ fontSize: 9, color: "#5a6585", fontStyle: "italic" }}>{a.note}</span>}
                       </div>
                     ))}
                   </div>
-                  {entry.transponder && (
-                    <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 6, padding: "3px 9px" }}>
+                  {/* Pills specs */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {entry.transponder && (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
                         🔐 {entry.transponder}
                       </span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 6, padding: "3px 9px" }}>
+                    )}
+                    {entry.freq && (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
                         📡 {entry.freq}
                       </span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 6, padding: "3px 9px" }}>
-                        🔑 Lame {entry.blade} · {entry.buttons} btn
+                    )}
+                    {entry.blade && (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
+                        🔑 Lame {entry.blade}{entry.buttons ? ` · ${entry.buttons} btn` : ""}
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -4484,278 +4520,200 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 }
 
 function UrlProductImport({ onProductCreated, onClose }) {
-  const empty = {
-    nom: "", ref: "", marque: "", modeles: "", annees: "", prix: "", type: "Clé",
-    mainLibre: "", boutons: "", transpondeur: "", pcf: "", freq: "", pile: "",
-    lame: "", ean: "", refOrigine: "", lien: "", image: "",
-  };
+  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
   const [form, setForm] = React.useState(empty);
   const [loading, setLoading] = React.useState(false);
   const [analysed, setAnalysed] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
-  const [errors, setErrors] = React.useState({});
 
-  const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(e => ({ ...e, [k]: false })); };
-  const REQUIRED = ["nom", "modeles", "annees", "mainLibre", "boutons", "freq", "pile", "lame"];
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handleAnalyse = async () => {
     const url = form.lien.trim();
     if (!url) return;
-    setLoading(true); setErrorMsg(""); setAnalysed(false);
+    setLoading(true);
+    setErrorMsg("");
+    setAnalysed(false);
     try {
-      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const r = await fetch(proxy);
-      if (!r.ok) throw new Error("proxy");
-      const d = await r.json();
-      const raw = d.contents || "";
-
-      // Extrait une cellule du tableau inokey par son label
-      const fromTable = (label) => {
-        const esc = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const pats = [
-          new RegExp(esc + "[^<]*<\\/td>\\s*<td[^>]*>\\s*<(?:strong|b)>([^<]+)<", "i"),
-          new RegExp(esc + "[^<]*<\\/td>\\s*<td[^>]*>([^<]{1,120})<", "i"),
-        ];
-        for (const p of pats) { const m = raw.match(p); if (m?.[1]) return m[1].trim(); }
-        return "";
-      };
-
-      const getMeta = (name) => {
-        const m = raw.match(new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"))
-                || raw.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, "i"));
-        return m ? m[1].trim() : "";
-      };
-
-      const txt = raw.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-      const findTxt = (pats) => { for (const p of pats) { const m = txt.match(p); if (m?.[1]) return m[1].trim(); } return ""; };
-
-      // Extraction tableau inokey — ordre exact de la fiche
-      const typeRaw    = fromTable("Type de t") || fromTable("Type de telecommande");
-      const boutonsRaw = fromTable("Nombre de boutons");
-      const transRaw   = fromTable("Transpondeur");
-      const pcfRaw     = fromTable("PCF");
-      const freqRaw    = fromTable("quence") || fromTable("Frequence");
-      const pileRaw    = fromTable("Pile");
-      const lameRaw    = fromTable("Lame");
-      const eanRaw     = fromTable("EAN");
-      const refOrigRaw = fromTable("rence origine") || fromTable("Reference origine");
-
-      // Main libre depuis "Type de télécommande"
-      const mainLibre = typeRaw
-        ? (/mains?\s*libre|keyless|hands?\s*free|prox/i.test(typeRaw) ? "oui" : "non")
-        : (/mains?\s*libre|keyless|hands?\s*free|prox/i.test(txt) ? "oui" : "non");
-
-      // Nom
-      const nom = getMeta("og:title") || getMeta("twitter:title")
-        || findTxt([/<h1[^>]*>([^<]{5,120})<\/h1>/i, /<title[^>]*>([^<|]{5,})/i]) || "";
-
-      // Marque
-      const MARQUES = ["Alfa Romeo","Renault","Peugeot","Citro","Volkswagen","VW","Audi","BMW","Mercedes",
-        "Ford","Opel","Toyota","Nissan","Fiat","Seat","Skoda","Volvo","Hyundai","Kia","Mazda",
-        "Honda","Mitsubishi","Suzuki","Dacia","Lancia","Smart","Mini","Porsche","Land Rover","Jaguar"];
-      const marque = MARQUES.find(m => new RegExp("\\b" + m, "i").test(txt)) || "";
-
-      // Modèles
-      const modeles = findTxt([
-        /compatible[s]?\s+(?:avec\s+)?:?\s*([A-Z][^\n.]{5,80})/i,
-        /pour\s+([A-Z][a-z]+(?:\s+[A-Z0-9]?[a-z\d]+){1,4})/i,
-      ]).replace(/compatible[s]?\s+(?:avec)?:?\s*/i, "").slice(0, 120) || "";
-
-      // Années
-      const annees = (() => {
-        const m1 = txt.match(/(\d{4})\s*[-\u2013a]\s*(\d{4})/);
-        if (m1) return `${m1[1]} - ${m1[2]}`;
-        const ys = [...txt.matchAll(/\b(19\d{2}|20\d{2})\b/g)].map(m => +m[1]).filter(y => y >= 1990 && y <= 2030);
-        if (!ys.length) return "";
-        const mn = Math.min(...ys), mx = Math.max(...ys);
-        return mn === mx ? `${mn}` : `${mn} - ${mx}`;
-      })();
-
-      // Prix
-      const prix = getMeta("product:price:amount")
-        || findTxt([/(\d{1,3}[,.]\d{2})\s*\u20ac/, /\u20ac\s*(\d{1,3}[,.]\d{2})/]).replace(",", "") || "";
-
-      // Image
-      const image = getMeta("og:image") || getMeta("twitter:image")
-        || findTxt([/["'](https?:\/\/[^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)['"]/i]) || "";
-
+      const res = await fetch("/api/analyse-produit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
       setForm(prev => ({
         ...prev,
-        nom:         nom         || prev.nom,
-        marque:      marque      || prev.marque,
-        modeles:     modeles     || prev.modeles,
-        annees:      annees      || prev.annees,
-        prix:        prix        || prev.prix,
-        mainLibre:   mainLibre   || prev.mainLibre,
-        boutons:     boutonsRaw  || prev.boutons,
-        transpondeur:transRaw    || prev.transpondeur,
-        pcf:         pcfRaw      || prev.pcf,
-        freq:        freqRaw     || prev.freq,
-        pile:        pileRaw     || prev.pile,
-        lame:        lameRaw     || prev.lame,
-        ean:         eanRaw      || prev.ean,
-        refOrigine:  refOrigRaw  || prev.refOrigine,
-        image:       image       || prev.image,
+        nom: data.nom || prev.nom,
+        ref: data.ref || prev.ref,
+        marque: data.marque || prev.marque,
+        modeles: data.modeles || prev.modeles,
+        prix: data.prix || prev.prix,
+        type: data.type || prev.type,
+        freq: data.freq || prev.freq,
+        transpondeur: data.transpondeur || prev.transpondeur,
+        lame: data.lame || prev.lame,
+        image: data.image || prev.image || "",
       }));
       setAnalysed(true);
-    } catch {
-      setErrorMsg("Impossible de charger la page — remplis les champs manuellement");
+    } catch (e) {
+      setErrorMsg("Erreur réseau — vérifie ta connexion");
     }
     setLoading(false);
   };
 
   const handleConfirm = () => {
-    const newErrors = {};
-    REQUIRED.forEach(k => { if (!form[k]?.toString().trim()) newErrors[k] = true; });
-    if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
-    onProductCreated({
+    if (!form.nom.trim()) return;
+    const newProd = {
       id: "manuel-" + Date.now(),
       nom: form.nom.trim(),
       ref: form.ref.trim() || ("REF-" + Date.now().toString().slice(-6)),
       marque: form.marque.trim() || "Autre",
-      modeles: form.modeles.trim(), annees: form.annees.trim(),
-      boutons: form.boutons.toString().trim(), mainLibre: form.mainLibre,
-      prix: parseFloat(form.prix) || 0, categorie: "Aftermarket France", type: form.type || "Clé",
-      freq: form.freq.trim(), transpondeur: form.transpondeur.trim(), pcf: form.pcf.trim(),
-      lame: form.lame.trim(), pile: form.pile.trim(), ean: form.ean.trim(),
-      refOrigine: form.refOrigine.trim(), emoji: "🔑", image: form.image || FALLBACK_IMG,
+      modeles: form.modeles.trim(),
+      prix: parseFloat(form.prix) || 0,
+      categorie: "Aftermarket France",
+      type: form.type || "Clé",
+      freq: form.freq.trim(),
+      transpondeur: form.transpondeur.trim(),
+      lame: form.lame.trim(),
+      emoji: "🔑",
+      image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
       oeLinks: form.lien.trim() ? [{ label: "Voir la page produit", url: form.lien.trim() }] : [],
-    });
+    };
+    onProductCreated(newProd);
   };
 
-  const baseInp = { width: "100%", borderRadius: 12, padding: "10px 12px", color: "#1a1d2e", fontSize: 13, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" };
-  const inp = (err) => ({ ...baseInp, background: err ? "rgba(255,71,87,0.06)" : "#e8edf8", border: `1px solid ${err ? "#ff4757" : "rgba(108,99,255,0.2)"}` });
-  const lbl = (isReq, err) => ({ fontSize: 11, fontWeight: 600, color: err ? "#ff4757" : isReq ? "#1a1d2e" : "#5a6585", marginBottom: 4, display: "block" });
+  const inp = {
+    width: "100%", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.2)",
+    borderRadius: 12, padding: "10px 12px", color: "#1a1d2e", fontSize: 13,
+    outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box",
+  };
+  const lbl = { fontSize: 11, fontWeight: 600, color: "#5a6585", marginBottom: 4, display: "block" };
   const row = { marginBottom: 11 };
-  const reqMark = <span style={{ color: "#ff4757", marginLeft: 2 }}>*</span>;
-  const missingCount = REQUIRED.filter(k => !form[k]?.toString().trim()).length;
-  const canSubmit = missingCount === 0;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", zIndex: 600, display: "flex", alignItems: "flex-end" }}>
       <div style={{ background: "#c8d0e8", borderRadius: "24px 24px 0 0", padding: "22px 20px 36px", width: "100%", maxHeight: "93vh", overflowY: "auto", boxShadow: "0 -8px 40px rgba(108,99,255,0.18)" }}>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 800, color: "#1a1d2e" }}>➕ Ajouter un produit</div>
-            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Colle l'URL inokey.fr — la fiche est extraite automatiquement</div>
+            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Colle l'URL — l'IA remplit la fiche automatiquement</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#5a6585", fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
-        {missingCount > 0 && (
-          <div style={{ background: "rgba(255,71,87,0.06)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#ff4757", fontWeight: 600 }}>
-            {missingCount} champ{missingCount > 1 ? "s" : ""} obligatoire{missingCount > 1 ? "s" : ""} à renseigner
-          </div>
-        )}
-
-        {/* URL */}
-        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", marginBottom: 4, display: "block" }}>🔗 URL de la page produit (inokey.fr)</label>
+        {/* URL + bouton analyser */}
+        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, marginTop: 10 }}>
+          <label style={{ ...lbl, color: "#6c63ff" }}>🔗 URL de la page produit</label>
           <div style={{ display: "flex", gap: 8 }}>
-            <input value={form.lien} onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); }}
+            <input
+              value={form.lien}
+              onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); }}
               onKeyDown={e => e.key === "Enter" && form.lien.trim() && handleAnalyse()}
-              placeholder="https://www.inokey.fr/..."
-              style={{ ...inp(false), background: "#fff", flex: 1 }} autoFocus inputMode="url" />
-            <button onClick={handleAnalyse} disabled={loading || !form.lien.trim()}
+              placeholder="https://www.fournisseur.fr/produit/..."
+              style={{ ...inp, background: "#fff", flex: 1 }}
+              autoFocus
+              inputMode="url"
+            />
+            <button
+              onClick={handleAnalyse}
+              disabled={loading || !form.lien.trim()}
               style={{ flexShrink: 0, padding: "10px 14px", borderRadius: 12, border: "none", background: loading ? "#a0a0a0" : "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: loading || !form.lien.trim() ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-              {loading ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</> : "🔍 Analyser"}
+              {loading
+                ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</>
+                : "🔍 Analyser"}
             </button>
           </div>
           <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-          {errorMsg && <div style={{ marginTop: 8, background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#ff4757", fontWeight: 600 }}>⚠ {errorMsg}</div>}
-          {analysed && <div style={{ marginTop: 8, background: "rgba(0,245,147,0.08)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#00b87a", fontWeight: 600 }}>✅ Fiche extraite — vérifie et complète si besoin</div>}
+          {errorMsg && (
+            <div style={{ marginTop: 8, background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#ff4757", fontWeight: 600 }}>⚠ {errorMsg}</div>
+          )}
+          {analysed && (
+            <div style={{ marginTop: 8, background: "rgba(0,245,147,0.08)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#00b87a", fontWeight: 600 }}>✅ Fiche remplie automatiquement — vérifie et complète si besoin</div>
+          )}
         </div>
 
-        {/* Nom */}
+        {/* Champs produit */}
         <div style={row}>
-          <label style={lbl(true, errors.nom)}>Nom du produit{reqMark}</label>
-          <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: ALF-CIR1 - Clé Compatible Alfa Romeo Mito" style={inp(errors.nom)} />
+          <label style={lbl}>Nom du produit *</label>
+          <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 4 boutons 433MHz" style={inp} />
         </div>
 
-        {/* Ref + Prix + Marque + Type */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div><label style={lbl(false, false)}>Référence / SKU</label>
-            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: ALF-CIR1" style={inp(false)} /></div>
-          <div><label style={lbl(false, false)}>Prix d'achat (€)</label>
-            <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp(false)} /></div>
-          <div><label style={lbl(false, false)}>Marque véhicule</label>
-            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Alfa Romeo" style={inp(false)} /></div>
-          <div><label style={lbl(false, false)}>Type produit</label>
-            <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp(false), appearance: "none" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={row}>
+            <label style={lbl}>Référence / SKU</label>
+            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: VA2-433-ID46" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Prix d'achat (€)</label>
+            <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Marque véhicule</label>
+            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Type</label>
+            <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp, appearance: "none" }}>
               {["Clé","Télécommande","Coque","Transpondeur","Lame","Accessoire"].map(t => <option key={t}>{t}</option>)}
-            </select></div>
-        </div>
-
-        {/* Séparateur */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "14px 0 12px" }}>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.25)" }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#ff4757", letterSpacing: 1, textTransform: "uppercase" }}>Champs obligatoires</span>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.25)" }} />
-        </div>
-
-        {/* Modèles + Années */}
-        <div style={row}>
-          <label style={lbl(true, errors.modeles)}>Modèles compatibles{reqMark}</label>
-          <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Mito 2008 - 2015" style={inp(errors.modeles)} />
-        </div>
-        <div style={row}>
-          <label style={lbl(true, errors.annees)}>Années{reqMark}</label>
-          <input value={form.annees} onChange={e => set("annees", e.target.value)} placeholder="ex: 2008 - 2015" style={inp(errors.annees)} />
-        </div>
-
-        {/* Ordre inokey : Main libre → Boutons → Transpondeur → PCF → Fréquence → Pile → Lame */}
-        <div style={row}>
-          <label style={lbl(true, errors.mainLibre)}>Type de télécommande{reqMark}</label>
-          <select value={form.mainLibre} onChange={e => set("mainLibre", e.target.value)} style={{ ...inp(errors.mainLibre), appearance: "none", color: form.mainLibre ? "#1a1d2e" : "#8890aa" }}>
-            <option value="">— Sélectionner —</option>
-            <option value="non">NON MAINS LIBRES</option>
-            <option value="oui">MAINS LIBRES</option>
-          </select>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div><label style={lbl(true, errors.boutons)}>Nombre de boutons{reqMark}</label>
-            <input type="number" min="1" max="10" value={form.boutons} onChange={e => set("boutons", e.target.value)} placeholder="ex: 3" style={inp(errors.boutons)} /></div>
-          <div><label style={lbl(false, false)}>Transpondeur</label>
-            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp(false)} /></div>
-          <div><label style={lbl(false, false)}>PCF</label>
-            <input value={form.pcf} onChange={e => set("pcf", e.target.value)} placeholder="ex: 7946" style={inp(false)} /></div>
-          <div><label style={lbl(true, errors.freq)}>Fréquence{reqMark}</label>
-            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433.920 MHz ASK" style={inp(errors.freq)} /></div>
-          <div><label style={lbl(true, errors.pile)}>Pile{reqMark}</label>
-            <input value={form.pile} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp(errors.pile)} /></div>
-          <div><label style={lbl(true, errors.lame)}>Lame{reqMark}</label>
-            <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: SIP22 / FT22" style={inp(errors.lame)} /></div>
-        </div>
-
-        {/* EAN + Réf. origine */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div><label style={lbl(false, false)}>EAN</label>
-            <input value={form.ean} onChange={e => set("ean", e.target.value)} placeholder="ex: 3701757304881" style={inp(false)} /></div>
-          <div><label style={lbl(false, false)}>Référence origine</label>
-            <input value={form.refOrigine} onChange={e => set("refOrigine", e.target.value)} placeholder="ex: 71751033" style={inp(false)} /></div>
-        </div>
-
-        {/* Photo */}
-        <div style={{ background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px", marginBottom: 11 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", marginBottom: 4, display: "block" }}>📸 URL de la photo</label>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {form.image && form.image !== FALLBACK_IMG && (
-              <img src={form.image} alt="" onError={e => { e.target.style.display="none"; }}
-                style={{ width: 52, height: 52, objectFit: "contain", borderRadius: 8, background: "#e8edf8", flexShrink: 0, border: "1px solid rgba(108,99,255,0.2)" }} />
-            )}
-            <input value={form.image === FALLBACK_IMG ? "" : (form.image || "")} onChange={e => set("image", e.target.value)}
-              placeholder="URL de l'image produit" style={{ ...inp(false), fontSize: 11 }} inputMode="url" />
+            </select>
+          </div>
+          <div style={row}>
+            <label style={lbl}>Fréquence</label>
+            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433MHz" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Transpondeur</label>
+            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp} />
           </div>
         </div>
 
+        <div style={row}>
+          <label style={lbl}>Modèles compatibles</label>
+          <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo" style={inp} />
+        </div>
+
+        <div style={row}>
+          <label style={lbl}>Lame</label>
+          <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
+        </div>
+
+        <div style={row}>
+          <label style={lbl}>Pile</label>
+          <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
+        </div>
+
+        {/* Champ image */}
+        <div style={{ ...row, background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px" }}>
+          <label style={{ ...lbl, color: "#6c63ff" }}>📸 URL de la photo du produit</label>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            {form.image && form.image !== FALLBACK_IMG && (
+              <img src={form.image} alt="" onError={e => { e.target.style.display="none"; }}
+                style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8, background: "#e8edf8", flexShrink: 0, border: "1px solid rgba(108,99,255,0.2)" }} />
+            )}
+            <input
+              value={form.image === FALLBACK_IMG ? "" : (form.image || "")}
+              onChange={e => set("image", e.target.value)}
+              placeholder="Appui long sur la photo → Copier le lien"
+              style={{ ...inp, fontSize: 11 }}
+              inputMode="url"
+            />
+          </div>
+          <div style={{ fontSize: 10, color: "#5a6585", marginTop: 6 }}>💡 Sur mobile : ouvre la page produit → appui long sur la photo → "Copier le lien de l'image"</div>
+        </div>
+
+        {/* Boutons */}
         <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>Annuler</button>
-          <button onClick={handleConfirm}
-            style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: canSubmit ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.25)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: canSubmit ? "pointer" : "default", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-            {canSubmit ? "✅ Créer la fiche produit" : `${missingCount} champ${missingCount > 1 ? "s" : ""} manquant${missingCount > 1 ? "s" : ""}`}
+          <button onClick={onClose}
+            style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+            Annuler
+          </button>
+          <button onClick={handleConfirm} disabled={!form.nom.trim()}
+            style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: form.nom.trim() ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.3)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: form.nom.trim() ? "pointer" : "default" }}>
+            ✅ Créer la fiche produit
           </button>
         </div>
 
@@ -4763,7 +4721,6 @@ function UrlProductImport({ onProductCreated, onClose }) {
     </div>
   );
 }
-
 
 // ============================================================
 // ========================= APP ==============================
