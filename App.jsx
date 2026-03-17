@@ -4443,71 +4443,197 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 }
 
 function UrlProductImport({ onProductCreated, onClose }) {
-  const empty = {
-    nom: "", ref: "", marque: "", modeles: "", annees: "", prix: "",
-    freq: "", transpondeur: "", lame: "", pile: "", boutons: "", mainLibre: "",
-    type: "Clé", lien: "", image: "",
-  };
+  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
   const [form, setForm] = React.useState(empty);
   const [loading, setLoading] = React.useState(false);
   const [analysed, setAnalysed] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
-  const [errors, setErrors] = React.useState({});
 
-  const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(e => ({ ...e, [k]: false })); };
-
-  const REQUIRED = ["nom", "modeles", "annees", "pile", "boutons", "mainLibre", "freq", "lame"];
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handleAnalyse = async () => {
     const url = form.lien.trim();
     if (!url) return;
     setLoading(true); setErrorMsg(""); setAnalysed(false);
     try {
-      const res = await fetch("/api/analyse-produit", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const data = await res.json();
-      if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
+      // Récupère le contenu de la page via proxy CORS
+      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+      const r = await fetch(proxy);
+      if (!r.ok) throw new Error("proxy");
+      const d = await r.json();
+      const raw = d.contents || "";
+
+      // Extrait les meta/json-ld avant de supprimer les balises
+      const getMeta = (name) => {
+        const m = raw.match(new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"))
+                || raw.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, "i"));
+        return m ? m[1].trim() : "";
+      };
+      const getJsonLd = (key) => {
+        const m = raw.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+        if (!m) return "";
+        try {
+          const obj = JSON.parse(m[1]);
+          const val = obj[key] || (obj["@graph"] && obj["@graph"][0]?.[key]);
+          return val ? String(val).trim() : "";
+        } catch { return ""; }
+      };
+
+      // Texte brut nettoyé pour les regex
+      const txt = raw
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ");
+
+      // ── Helpers regex ──────────────────────────────────────────
+      const find = (patterns) => {
+        for (const p of patterns) {
+          const m = txt.match(p);
+          if (m && m[1]) return m[1].trim().replace(/[<>]/g, "");
+        }
+        return "";
+      };
+      const findAll = (patterns) => {
+        const results = [];
+        for (const p of patterns) {
+          const m = txt.match(p);
+          if (m && m[1]) { results.push(m[1].trim()); }
+        }
+        return results;
+      };
+
+      // ── Nom ───────────────────────────────────────────────────
+      const nom = getMeta("og:title") || getMeta("twitter:title") || getJsonLd("name")
+        || find([/<title[^>]*>([^<]{5,})<\/title>/i, /h1[^>]*>([^<]{5,})<\/h1>/i]) || "";
+
+      // ── Référence ────────────────────────────────────────────
+      const ref = find([
+        /(?:référence|ref\.?|sku|code produit|article)[^\w]*:?\s*([\w\-\.]{3,20})/i,
+        /\bSKU[:\s]+([\w\-]{3,20})/i,
+        /(?:^|[\s,])((?:VA|HU|SIP|GT|HYN|MIT|TOY|NSN|FO|HO|MAZ|VO|SZ|MAZ|KI|YM|IS)\d{1,4}[A-Z\-]?[\w\-]*)/i,
+      ]);
+
+      // ── Prix ─────────────────────────────────────────────────
+      const prix = getMeta("product:price:amount")
+        || find([/(\d{1,3}[,\.]\d{2})\s*€/, /€\s*(\d{1,3}[,\.]\d{2})/, /prix[^:]*:\s*(\d{1,3}[,\.]\d{1,2})/i])
+            .replace(",", ".") || "";
+
+      // ── Marque véhicule ──────────────────────────────────────
+      const MARQUES_VEH = ["Renault","Peugeot","Citroën","Citroen","Volkswagen","VW","Audi","BMW","Mercedes",
+        "Ford","Opel","Toyota","Nissan","Fiat","Seat","Skoda","Volvo","Hyundai","Kia","Mazda",
+        "Honda","Mitsubishi","Suzuki","Dacia","Alfa Romeo","Lancia","Smart","Mini","Porsche","Land Rover","Jaguar"];
+      const marqueFound = MARQUES_VEH.find(m => new RegExp(`\\b${m}\\b`, "i").test(txt)) || "";
+
+      // ── Modèles ──────────────────────────────────────────────
+      const MODELES_PATTERNS = [
+        /compatible[s]?\s+(?:avec\s+)?:?\s*([A-Z][^\n\.]{5,80})/i,
+        /v[eé]hicule[s]?\s+compatible[s]?\s*:?\s*([^\n\.]{5,80})/i,
+        /pour\s+([A-Z][a-z]+(?:\s+[A-Z]?[a-z\d]+){1,5})/i,
+        /modèles?\s*:?\s*([^\n\.]{5,60})/i,
+      ];
+      const modeles = find(MODELES_PATTERNS)
+        .replace(/compatible[s]?\s+(?:avec)?:?\s*/i, "")
+        .replace(/véhicules?\s*:?\s*/i, "")
+        .slice(0, 120) || "";
+
+      // ── Années ───────────────────────────────────────────────
+      const annees = find([
+        /(\d{4})\s*[-–à]\s*(\d{4})/,
+        /(?:de|depuis|from|ab)\s+(\d{4})/i,
+        /(\d{4})\s*(?:et\s+suivants?|onwards?)/i,
+      ]) || (() => {
+        // cherche deux années proches dans le texte
+        const ys = [...txt.matchAll(/\b(19\d{2}|20\d{2})\b/g)].map(m => parseInt(m[1])).filter(y => y >= 1990 && y <= 2030);
+        if (ys.length >= 2) { const mn = Math.min(...ys), mx = Math.max(...ys); return mn === mx ? `${mn}` : `${mn} – ${mx}`; }
+        return ys[0] ? `${ys[0]}` : "";
+      })();
+
+      // ── Fréquence ────────────────────────────────────────────
+      const freq = find([
+        /(43[34]\s*(?:\.\d+)?\s*MHz)/i,
+        /(868\s*MHz)/i,
+        /(315\s*MHz)/i,
+        /fr[eé]quence[^:]*:\s*([\d\.]+\s*MHz)/i,
+        /([\d\.]+\s*MHz)/i,
+      ]);
+
+      // ── Transpondeur ─────────────────────────────────────────
+      const transpondeur = find([
+        /(?:transpondeur|transponder|chip)[^:]*:?\s*((?:ID|PCF|HITAG|Megamos|Texas|NXP)[\w\s\-]{1,20})/i,
+        /\b(ID\s*4[0-9]|ID\s*6[0-9]|ID\s*8[0-9]|PCF79\d{2}|HITAG\s*(?:2|AES|Pro)?|Megamos[\w\s]*|Texas[\w\s]*)\b/i,
+      ]);
+
+      // ── Lame ─────────────────────────────────────────────────
+      const LAMES = ["VA2","VA6","HU66","HU101","SIP22","GT15R","HY20","HON66","TOY43","MAZ24",
+        "MIT11","NSN14","SZ11","VO102","HU56","HU58","HU64","YM28","IS300","FO21","FO38","FO40","HU83","HU92","HU100","HU162T"];
+      const lame = LAMES.find(l => new RegExp(`\\b${l}\\b`, "i").test(txt))
+        || find([/lame[^:]*:?\s*([\w]{2,8})/i, /blade[^:]*:?\s*([\w]{2,8})/i]);
+
+      // ── Pile ─────────────────────────────────────────────────
+      const pile = find([
+        /\b(CR\s*2032|CR\s*1632|CR\s*2016|CR\s*1616|CR\s*2025|CR\s*2430)\b/i,
+        /pile[^:]*:?\s*([\w\d]{4,8})/i,
+        /batterie[^:]*:?\s*([\w\d]{4,8})/i,
+        /battery[^:]*:?\s*([\w\d]{4,8})/i,
+      ]).replace(/\s/g, "").toUpperCase() || "";
+
+      // ── Boutons ──────────────────────────────────────────────
+      const boutons = find([
+        /(\d)\s*(?:boutons?|buttons?|touches?)/i,
+        /(?:boutons?|buttons?|touches?)\s*:?\s*(\d)/i,
+        /(\d)\s*(?:clés?|key[s]?)/i,
+      ]);
+
+      // ── Main libre ───────────────────────────────────────────
+      const mainLibre = /\b(?:main.?libre|keyless.?(?:entry|go|access)|hands?.?free|proximity|prox|proximité)\b/i.test(txt)
+        ? "oui" : "non";
+
+      // ── Image ────────────────────────────────────────────────
+      const image = getMeta("og:image") || getMeta("twitter:image")
+        || find([
+          /["'](https?:\/\/[^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)['"]/i,
+          /<img[^>]+src=["'](https?:\/\/[^"']+)['"]/i,
+        ]);
+
+      // ── Peuple le formulaire ─────────────────────────────────
       setForm(prev => ({
         ...prev,
-        nom: data.nom || prev.nom,
-        ref: data.ref || prev.ref,
-        marque: data.marque || prev.marque,
-        modeles: data.modeles || prev.modeles,
-        prix: data.prix || prev.prix,
-        type: data.type || prev.type,
-        freq: data.freq || prev.freq,
-        transpondeur: data.transpondeur || prev.transpondeur,
-        lame: data.lame || prev.lame,
-        pile: data.pile || prev.pile,
-        image: data.image || prev.image || "",
+        nom:          nom          || prev.nom,
+        ref:          ref          || prev.ref,
+        marque:       marqueFound  || prev.marque,
+        modeles:      modeles      || prev.modeles,
+        annees:       typeof annees === "string" ? annees : (annees[0] && annees[1] ? `${annees[0]} – ${annees[1]}` : String(annees || "")) || prev.annees,
+        prix:         prix         || prev.prix,
+        freq:         freq         || prev.freq,
+        transpondeur: transpondeur || prev.transpondeur,
+        lame:         lame         || prev.lame,
+        pile:         pile         || prev.pile,
+        boutons:      boutons      || prev.boutons,
+        mainLibre:    mainLibre    || prev.mainLibre,
+        image:        image        || prev.image || "",
       }));
       setAnalysed(true);
-    } catch { setErrorMsg("Erreur réseau — vérifie ta connexion"); }
+    } catch (e) {
+      setErrorMsg("Impossible de charger la page — colle l'URL et remplis manuellement");
+    }
     setLoading(false);
   };
 
   const handleConfirm = () => {
-    const newErrors = {};
-    REQUIRED.forEach(k => { if (!form[k]?.toString().trim()) newErrors[k] = true; });
-    if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
+    if (!form.nom.trim()) return;
     const newProd = {
       id: "manuel-" + Date.now(),
       nom: form.nom.trim(),
       ref: form.ref.trim() || ("REF-" + Date.now().toString().slice(-6)),
       marque: form.marque.trim() || "Autre",
       modeles: form.modeles.trim(),
-      annees: form.annees.trim(),
-      boutons: form.boutons.toString().trim(),
-      mainLibre: form.mainLibre,
       prix: parseFloat(form.prix) || 0,
       categorie: "Aftermarket France",
       type: form.type || "Clé",
       freq: form.freq.trim(),
       transpondeur: form.transpondeur.trim(),
       lame: form.lame.trim(),
-      pile: form.pile.trim(),
       emoji: "🔑",
       image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
@@ -4516,25 +4642,20 @@ function UrlProductImport({ onProductCreated, onClose }) {
     onProductCreated(newProd);
   };
 
-  const baseInp = {
-    width: "100%", borderRadius: 12, padding: "10px 12px", color: "#1a1d2e",
-    fontSize: 13, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif",
-    boxSizing: "border-box",
+  const inp = {
+    width: "100%", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.2)",
+    borderRadius: 12, padding: "10px 12px", color: "#1a1d2e", fontSize: 13,
+    outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box",
   };
-  const inp  = (err) => ({ ...baseInp, background: err ? "rgba(255,71,87,0.06)" : "#e8edf8", border: `1px solid ${err ? "#ff4757" : "rgba(108,99,255,0.2)"}` });
-  const lbl  = (req, err) => ({ fontSize: 11, fontWeight: 600, color: err ? "#ff4757" : req ? "#1a1d2e" : "#5a6585", marginBottom: 4, display: "block" });
-  const row  = { marginBottom: 11 };
-  const req  = <span style={{ color: "#ff4757", marginLeft: 2 }}>*</span>;
-
-  const missingCount = REQUIRED.filter(k => !form[k]?.toString().trim()).length;
-  const canSubmit = missingCount === 0;
+  const lbl = { fontSize: 11, fontWeight: 600, color: "#5a6585", marginBottom: 4, display: "block" };
+  const row = { marginBottom: 11 };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", zIndex: 600, display: "flex", alignItems: "flex-end" }}>
       <div style={{ background: "#c8d0e8", borderRadius: "24px 24px 0 0", padding: "22px 20px 36px", width: "100%", maxHeight: "93vh", overflowY: "auto", boxShadow: "0 -8px 40px rgba(108,99,255,0.18)" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 800, color: "#1a1d2e" }}>➕ Ajouter un produit</div>
             <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Colle l'URL — l'IA remplit la fiche automatiquement</div>
@@ -4542,22 +4663,22 @@ function UrlProductImport({ onProductCreated, onClose }) {
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#5a6585", fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
-        {/* Compteur champs manquants */}
-        {missingCount > 0 && (
-          <div style={{ background: "rgba(255,71,87,0.06)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#ff4757", fontWeight: 600 }}>
-            {missingCount} champ{missingCount > 1 ? "s" : ""} obligatoire{missingCount > 1 ? "s" : ""} à renseigner
-          </div>
-        )}
-
-        {/* URL + analyser */}
-        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", marginBottom: 4, display: "block" }}>🔗 URL de la page produit</label>
+        {/* URL + bouton analyser */}
+        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, marginTop: 10 }}>
+          <label style={{ ...lbl, color: "#6c63ff" }}>🔗 URL de la page produit</label>
           <div style={{ display: "flex", gap: 8 }}>
-            <input value={form.lien} onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); }}
+            <input
+              value={form.lien}
+              onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); }}
               onKeyDown={e => e.key === "Enter" && form.lien.trim() && handleAnalyse()}
               placeholder="https://www.fournisseur.fr/produit/..."
-              style={{ ...inp(false), background: "#fff", flex: 1 }} autoFocus inputMode="url" />
-            <button onClick={handleAnalyse} disabled={loading || !form.lien.trim()}
+              style={{ ...inp, background: "#fff", flex: 1 }}
+              autoFocus
+              inputMode="url"
+            />
+            <button
+              onClick={handleAnalyse}
+              disabled={loading || !form.lien.trim()}
               style={{ flexShrink: 0, padding: "10px 14px", borderRadius: 12, border: "none", background: loading ? "#a0a0a0" : "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: loading || !form.lien.trim() ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
               {loading
                 ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</>
@@ -4565,120 +4686,92 @@ function UrlProductImport({ onProductCreated, onClose }) {
             </button>
           </div>
           <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-          {errorMsg && <div style={{ marginTop: 8, background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#ff4757", fontWeight: 600 }}>⚠ {errorMsg}</div>}
-          {analysed && <div style={{ marginTop: 8, background: "rgba(0,245,147,0.08)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#00b87a", fontWeight: 600 }}>✅ Fiche remplie — vérifie et complète les champs obligatoires</div>}
+          {errorMsg && (
+            <div style={{ marginTop: 8, background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#ff4757", fontWeight: 600 }}>⚠ {errorMsg}</div>
+          )}
+          {analysed && (
+            <div style={{ marginTop: 8, background: "rgba(0,245,147,0.08)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#00b87a", fontWeight: 600 }}>✅ Fiche remplie automatiquement — vérifie et complète si besoin</div>
+          )}
         </div>
 
-        {/* Nom */}
+        {/* Champs produit */}
         <div style={row}>
-          <label style={lbl(true, errors.nom)}>Nom du produit{req}</label>
-          <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 4 boutons 433MHz" style={inp(errors.nom)} />
+          <label style={lbl}>Nom du produit *</label>
+          <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 4 boutons 433MHz" style={inp} />
         </div>
 
-        {/* Ref + Prix */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div>
-            <label style={lbl(false, false)}>Référence / SKU</label>
-            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: VA2-433-ID46" style={inp(false)} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={row}>
+            <label style={lbl}>Référence / SKU</label>
+            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: VA2-433-ID46" style={inp} />
           </div>
-          <div>
-            <label style={lbl(false, false)}>Prix d'achat (€)</label>
-            <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp(false)} />
+          <div style={row}>
+            <label style={lbl}>Prix d'achat (€)</label>
+            <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp} />
           </div>
-        </div>
-
-        {/* Marque + Type */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div>
-            <label style={lbl(false, false)}>Marque véhicule</label>
-            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp(false)} />
+          <div style={row}>
+            <label style={lbl}>Marque véhicule</label>
+            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp} />
           </div>
-          <div>
-            <label style={lbl(false, false)}>Type produit</label>
-            <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp(false), appearance: "none" }}>
+          <div style={row}>
+            <label style={lbl}>Type</label>
+            <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp, appearance: "none" }}>
               {["Clé","Télécommande","Coque","Transpondeur","Lame","Accessoire"].map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
+          <div style={row}>
+            <label style={lbl}>Fréquence</label>
+            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433MHz" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Transpondeur</label>
+            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp} />
+          </div>
         </div>
 
-        {/* Séparateur champs obligatoires */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "14px 0 12px" }}>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.25)" }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#ff4757", letterSpacing: 1, textTransform: "uppercase" }}>Champs obligatoires</span>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.25)" }} />
-        </div>
-
-        {/* Modèles */}
         <div style={row}>
-          <label style={lbl(true, errors.modeles)}>Modèles compatibles{req}</label>
-          <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo" style={inp(errors.modeles)} />
+          <label style={lbl}>Modèles compatibles</label>
+          <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo" style={inp} />
         </div>
 
-        {/* Années + Lame */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div>
-            <label style={lbl(true, errors.annees)}>Années{req}</label>
-            <input value={form.annees} onChange={e => set("annees", e.target.value)} placeholder="ex: 2012 – 2020" style={inp(errors.annees)} />
-          </div>
-          <div>
-            <label style={lbl(true, errors.lame)}>Type de lame{req}</label>
-            <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2, HU66" style={inp(errors.lame)} />
-          </div>
+        <div style={row}>
+          <label style={lbl}>Lame</label>
+          <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
         </div>
 
-        {/* Fréquence + Transpondeur */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div>
-            <label style={lbl(true, errors.freq)}>Fréquence{req}</label>
-            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433 MHz" style={inp(errors.freq)} />
-          </div>
-          <div>
-            <label style={lbl(false, false)}>Transpondeur</label>
-            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp(false)} />
-          </div>
+        <div style={row}>
+          <label style={lbl}>Pile</label>
+          <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
         </div>
 
-        {/* Pile + Boutons + Main libre */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 11 }}>
-          <div>
-            <label style={lbl(true, errors.pile)}>Type de pile{req}</label>
-            <input value={form.pile} onChange={e => set("pile", e.target.value)} placeholder="CR2032" style={inp(errors.pile)} />
-          </div>
-          <div>
-            <label style={lbl(true, errors.boutons)}>Nb boutons{req}</label>
-            <input type="number" min="1" max="10" value={form.boutons} onChange={e => set("boutons", e.target.value)} placeholder="ex: 3" style={inp(errors.boutons)} />
-          </div>
-          <div>
-            <label style={lbl(true, errors.mainLibre)}>Main libre{req}</label>
-            <select value={form.mainLibre} onChange={e => set("mainLibre", e.target.value)} style={{ ...inp(errors.mainLibre), appearance: "none", color: form.mainLibre ? "#1a1d2e" : "#8890aa" }}>
-              <option value="">—</option>
-              <option value="oui">Oui</option>
-              <option value="non">Non</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Photo */}
-        <div style={{ background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px", marginBottom: 11 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", marginBottom: 4, display: "block" }}>📸 URL de la photo</label>
+        {/* Champ image */}
+        <div style={{ ...row, background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px" }}>
+          <label style={{ ...lbl, color: "#6c63ff" }}>📸 URL de la photo du produit</label>
           <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
             {form.image && form.image !== FALLBACK_IMG && (
               <img src={form.image} alt="" onError={e => { e.target.style.display="none"; }}
-                style={{ width: 52, height: 52, objectFit: "contain", borderRadius: 8, background: "#e8edf8", flexShrink: 0, border: "1px solid rgba(108,99,255,0.2)" }} />
+                style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8, background: "#e8edf8", flexShrink: 0, border: "1px solid rgba(108,99,255,0.2)" }} />
             )}
-            <input value={form.image === FALLBACK_IMG ? "" : (form.image || "")} onChange={e => set("image", e.target.value)}
-              placeholder="Appui long sur la photo → Copier le lien" style={{ ...inp(false), fontSize: 11 }} inputMode="url" />
+            <input
+              value={form.image === FALLBACK_IMG ? "" : (form.image || "")}
+              onChange={e => set("image", e.target.value)}
+              placeholder="Appui long sur la photo → Copier le lien"
+              style={{ ...inp, fontSize: 11 }}
+              inputMode="url"
+            />
           </div>
+          <div style={{ fontSize: 10, color: "#5a6585", marginTop: 6 }}>💡 Sur mobile : ouvre la page produit → appui long sur la photo → "Copier le lien de l'image"</div>
         </div>
 
         {/* Boutons */}
         <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+          <button onClick={onClose}
+            style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
             Annuler
           </button>
-          <button onClick={handleConfirm}
-            style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: canSubmit ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.25)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: canSubmit ? "pointer" : "default", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-            {canSubmit ? "✅ Créer la fiche produit" : `${missingCount} champ${missingCount > 1 ? "s" : ""} manquant${missingCount > 1 ? "s" : ""}`}
+          <button onClick={handleConfirm} disabled={!form.nom.trim()}
+            style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: form.nom.trim() ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.3)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: form.nom.trim() ? "pointer" : "default" }}>
+            ✅ Créer la fiche produit
           </button>
         </div>
 
