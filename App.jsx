@@ -154,7 +154,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   return (
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 15px", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.12)" }}>
-        <button onClick={() => setPage("catalogue")} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
+        <button onClick={() => setPage("recherche")} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
           <DIcon d="M19 12H5M12 5l-7 7 7 7" /> Retour
         </button>
         <div style={{ flex: 1 }} />
@@ -162,7 +162,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           showDeleteConfirm ? (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#ff4757", fontWeight: 600 }}>Confirmer ?</span>
-              <button onClick={() => { onDelete(p.id); setPage("catalogue"); }} style={{ background: "#ff4757", border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Oui</button>
+              <button onClick={() => { onDelete(p.id); setPage("recherche"); }} style={{ background: "#ff4757", border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Oui</button>
               <button onClick={() => setShowDeleteConfirm(false)} style={{ background: "none", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 8, padding: "5px 10px", color: "#5a6585", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>Non</button>
             </div>
           ) : (
@@ -5732,8 +5732,8 @@ export default function App() {
             onProductCreated={(newProd) => {
               setProducts(prev => [newProd, ...prev]);
               setShowUrlImport(false);
-              setSelectedProduct(newProd);
-              setPage("detail");
+              
+              setPage("recherche");
               showToast("✅ Fiche créée dans le catalogue !");
             }}
             onClose={() => setShowUrlImport(false)}
