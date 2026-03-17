@@ -79,8 +79,6 @@ const SearchIcon = () => <Icon d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0
 const KeyIcon = () => <Icon d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />;
 
 
-const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
-
 // ============================================================
 // =================== DETAIL PAGE COMPONENT =================
 // ============================================================
@@ -3525,11 +3523,12 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   );
 }
 
-function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialTab, onAddToStock, onAddToCatalogue, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
+function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
   const [marque, setMarque] = useState("");
   const [modele, setModele] = useState("");
   const [annee, setAnnee] = useState("");
   const [result, setResult] = useState(null);
+  const [freeSearch, setFreeSearch] = useState(initialSearch || "");
   const [activeTab, setActiveTab] = useState("xhorse");
   const [xhorseMarque, setXhorseMarque] = useState("");
   const [xhorseModele, setXhorseModele] = useState("");
@@ -3593,6 +3592,18 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
     return list;
   }, [marque, modele]);
 
+  const freeResults = useMemo(() => {
+    if (!freeSearch.trim()) return [];
+    const q = freeSearch.toLowerCase();
+    return products.filter(function(p) {
+      return p.nom.toLowerCase().includes(q) ||
+        p.ref.toLowerCase().includes(q) ||
+        (p.lame && p.lame.toLowerCase().includes(q)) ||
+        (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
+        (p.marque && p.marque.toLowerCase().includes(q));
+    });
+  }, [freeSearch, products]);
+
   function handleSearch() {
     if (!marque || !modele) return;
     var veh = VEHICULE_DB.find(function(v) {
@@ -3617,18 +3628,14 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
         id: existingId,
         nom: veh.marque + " " + veh.modele + " - Lame " + lame,
         lame: lame,
-        marque: veh.marque,
         marqueVehicule: veh.marque,
-        modeles: veh.modele || "",
         transpondeur: veh.transpondeur,
         freq: veh.freq || "433 MHz",
         type: "Clé aftermarket",
-        categorie: "Aftermarket France",
         ref: lame + "-" + veh.marque.replace(/[^A-Za-z]/g,"").toUpperCase().slice(0,4),
         prix: 0,
         isVirtual: true,
         emoji: "🔑",
-        image: getKeyImage(lame) || null,
       };
     });
     // Merge: produits en stock d'abord, puis virtuels non encore en stock
@@ -3696,16 +3703,10 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                 style={{ flex: 1, padding: "9px 6px", borderRadius: 10, border: "none", background: "rgba(108,99,255,0.12)", color: accent, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
                 + Intervention
               </button>
-            : <div style={{ display: "flex", gap: 5, flex: 1 }}>
-                <button onClick={function() { onAddToCatalogue && onAddToCatalogue({ ...p, image: p.image || getKeyImage(p.lame) || null }); }}
-                  style={{ flex: 1, padding: "9px 4px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.3)", background: "transparent", color: "#6c63ff", fontWeight: 700, fontSize: 10, cursor: "pointer" }}>
-                  📋 Catalogue
-                </button>
-                <button onClick={function() { onAddToStock && onAddToStock({ ...p, image: p.image || getKeyImage(p.lame) || null }); }}
-                  style={{ flex: 1, padding: "9px 4px", borderRadius: 10, border: "none", background: grad1, color: "#fff", fontWeight: 700, fontSize: 10, cursor: "pointer" }}>
-                  📦 Stock
-                </button>
-              </div>
+            : <button onClick={function() { onAddToStock && onAddToStock(p); }}
+                style={{ flex: 1, padding: "9px 6px", borderRadius: 10, border: "none", background: grad1, color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                + Ajouter stock
+              </button>
           }
         </div>
       </div>
@@ -3878,26 +3879,33 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                                   padding: "2px 7px", borderRadius: 4 }}>{r}</span>;
                               })}
                             </div>
-                            <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
                             <button onClick={function() {
                                 if (alreadyAdded) return;
-                                var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: "", freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx, prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
-                                onAddToCatalogue && onAddToCatalogue(newProd);
-                                setStockAdded(function(prev) { return { ...prev, [entryKey]: "catalogue" }; });
-                              }}
-                              style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "1px solid rgba(234,88,12,0.35)", background: alreadyAdded === "catalogue" ? "#4ade80" : "transparent", color: alreadyAdded === "catalogue" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 10, cursor: alreadyAdded ? "default" : "pointer" }}>
-                              {alreadyAdded === "catalogue" ? "✓ Catalogue" : "📋 Catalogue"}
-                            </button>
-                            <button onClick={function() {
-                                if (alreadyAdded === "stock") return;
-                                var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: "", freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx, prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
+                                var newProd = {
+                                  id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
+                                  nom: entry.nom,
+                                  marque: xhorseMarque,
+                                  modeles: "",
+                                  freq: entry.freq,
+                                  transpondeur: entry.transpondeur || "",
+                                  type: "Xhorse",
+                                  ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx,
+                                  prix: 0,
+                                  categorie: "Xhorse",
+                                  emoji: "🔑",
+                                  image: keyPhoto || entry.image,
+                                  remotes: entry.remotes,
+                                  xhorse: entry.remotes.join(", "),
+                                  prox: entry.prox || false,
+                                };
                                 onAddToStock && onAddToStock(newProd);
-                                setStockAdded(function(prev) { return { ...prev, [entryKey]: "stock" }; });
+                                setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
                               }}
-                              style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "none", background: alreadyAdded === "stock" ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff", fontWeight: 800, fontSize: 10, cursor: alreadyAdded === "stock" ? "default" : "pointer" }}>
-                              {alreadyAdded === "stock" ? "✓ Stock" : "📦 Stock"}
+                              style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none",
+                                background: alreadyAdded ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)",
+                                color: "#fff", fontWeight: 800, fontSize: 12, cursor: alreadyAdded ? "default" : "pointer" }}>
+                              {alreadyAdded ? "✓ Ajouté au stock" : "+ Ajouter au stock"}
                             </button>
-                            </div>
                           </div>
                         </div>
                       );
@@ -3953,26 +3961,33 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                                     padding: "2px 7px", borderRadius: 4 }}>{r}</span>;
                                 })}
                               </div>
-                              <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
                               <button onClick={function() {
                                   if (alreadyAdded) return;
-                                  var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: modele, freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(), prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
-                                  onAddToCatalogue && onAddToCatalogue(newProd);
-                                  setStockAdded(function(prev) { return { ...prev, [entryKey]: "catalogue" }; });
-                                }}
-                                style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "1px solid rgba(234,88,12,0.35)", background: alreadyAdded === "catalogue" ? "#4ade80" : "transparent", color: alreadyAdded === "catalogue" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 10, cursor: alreadyAdded ? "default" : "pointer" }}>
-                                {alreadyAdded === "catalogue" ? "✓ Catalogue" : "📋 Catalogue"}
-                              </button>
-                              <button onClick={function() {
-                                  if (alreadyAdded === "stock") return;
-                                  var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: modele, freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(), prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
+                                  var newProd = {
+                                    id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
+                                    nom: entry.nom,
+                                    marque: xhorseMarque,
+                                    modeles: modele,
+                                    freq: entry.freq,
+                                    transpondeur: entry.transpondeur || "",
+                                    type: "Xhorse",
+                                    ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(),
+                                    prix: 0,
+                                    categorie: "Xhorse",
+                                    emoji: "🔑",
+                                    image: keyPhoto || entry.image,
+                                    remotes: entry.remotes,
+                                    xhorse: entry.remotes.join(", "),
+                                    prox: entry.prox || false,
+                                  };
                                   onAddToStock && onAddToStock(newProd);
-                                  setStockAdded(function(prev) { return { ...prev, [entryKey]: "stock" }; });
+                                  setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
                                 }}
-                                style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "none", background: alreadyAdded === "stock" ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff", fontWeight: 800, fontSize: 10, cursor: alreadyAdded === "stock" ? "default" : "pointer" }}>
-                                {alreadyAdded === "stock" ? "✓ Stock" : "📦 Stock"}
+                                style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none",
+                                  background: alreadyAdded ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)",
+                                  color: "#fff", fontWeight: 800, fontSize: 12, cursor: alreadyAdded ? "default" : "pointer" }}>
+                                {alreadyAdded ? "✓ Ajouté au stock" : "+ Ajouter au stock"}
                               </button>
-                              </div>
                             </div>
                           </div>
                         );
@@ -4163,6 +4178,8 @@ function InterventionForm({ clients, products, onSave, onClose, defaultClientId,
     </div>
   );
 }
+
+const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
 
 // ============================================================
 // ============= AJOUT PRODUIT AVEC ANALYSE URL ===============
@@ -4405,32 +4422,6 @@ export default function App() {
 
   const [xhorseTab, setXhorseTab] = useState(false);
   const [showUrlImport, setShowUrlImport] = useState(false);
-  const [stockFilter, setStockFilter] = useState("all");
-
-  function buildProd(vp) {
-    return {
-      ...vp,
-      id: vp.id,
-      nom: vp.nom,
-      lame: vp.lame || vp.blade || "",
-      transpondeur: vp.transpondeur || vp.transponder || "",
-      freq: vp.freq || vp.frequence || "433 MHz",
-      type: vp.type || "Clé aftermarket",
-      ref: vp.ref || "",
-      marque: vp.marque || vp.marqueVehicule || "",
-      modeles: vp.modeles || vp.vehiculesCompatibles || "",
-      prix: vp.prix || 0,
-      categorie: vp.categorie || "Aftermarket France",
-      emoji: vp.emoji || "🔑",
-      image: vp.image || vp.img || null,
-      xhorse: vp.xhorse || null,
-      remotes: vp.remotes || null,
-      prox: vp.prox || false,
-      lien: vp.lien || "",
-      oeLinks: vp.oeLinks || [],
-      notes: vp.notes || "",
-    };
-  }
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -4461,7 +4452,7 @@ export default function App() {
 
 
   const statsData = useMemo(() => {
-
+    const totalRefs = products.length;
     const okCount = products.filter(p => {
       const s = stock[p.id];
       return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT);
@@ -4477,7 +4468,7 @@ export default function App() {
       const manquant = Math.max(0, (s?.seuil || SEUIL_DEFAULT) + 2 - (s?.qty ?? 0));
       return sum + manquant * (p.prix || 0);
     }, 0);
-    return { okCount, alertCount, valeurStock, budgetCommande };
+    return { totalRefs, okCount, alertCount, valeurStock, budgetCommande };
   }, [stock, lowStockProducts, products]);
 
   // Persist stock to localStorage on every change
@@ -4577,7 +4568,7 @@ export default function App() {
     manualBtn: { padding: "10px 16px", borderRadius: 12, border: "none", cursor: "pointer", background: XH.grad1, color: "#fff", fontWeight: 600, fontSize: 13, boxShadow: `0 4px 20px ${XH.accent}44`, fontFamily: "'Plus Jakarta Sans', sans-serif" },
     googleBtn: { width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(66,133,244,0.3)", cursor: "pointer", background: "rgba(66,133,244,0.1)", color: "#4285f4", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, fontFamily: "'Plus Jakarta Sans', sans-serif" },
     linkBtn: (bg, color) => ({ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: bg, color: color, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", fontFamily: "'Plus Jakarta Sans', sans-serif" }),
-
+    statsRow: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 20 },
     statBox: { background: "#e8edf8", borderRadius: 16, padding: "14px 6px", border: `1px solid ${XH.border}`, textAlign: "center", position: "relative", overflow: "hidden" },
     statNum: { fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, color: XH.accent },
     statLabel: { fontSize: 8, color: "#5a6585", fontWeight: 600, textTransform: "uppercase", marginTop: 4, letterSpacing: 0.6 },
@@ -4596,17 +4587,18 @@ export default function App() {
   // =================== RENDERS ===================
   const renderHome = () => (
     <div style={S.page}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
+      <div style={S.statsRow}>
         {[
+          { val: statsData.totalRefs, label: "Réfs", color: "#6c63ff" },
           { val: statsData.okCount, label: "OK", color: "#00f593" },
           { val: statsData.alertCount, label: "Alertes", color: statsData.alertCount > 0 ? "#ff4757" : "#00f593" },
           { val: statsData.valeurStock.toFixed(0) + "€", label: "Valeur", color: "#00d4ff" },
           { val: statsData.budgetCommande.toFixed(0) + "€", label: "Budget", color: "#ffa726", clickable: statsData.alertCount > 0 },
         ].map((s, i) => (
-          <div key={i} className="mrkey-stat" onClick={i === 3 && s.clickable ? exportCSV : undefined}
-            style={{ ...S.statBox, cursor: i === 3 && s.clickable ? "pointer" : "default", background: i === 3 && s.clickable ? "rgba(255,167,38,0.06)" : S.statBox.background }}>
+          <div key={i} className="mrkey-stat" onClick={i === 4 && s.clickable ? exportCSV : undefined}
+            style={{ ...S.statBox, cursor: i === 4 && s.clickable ? "pointer" : "default", background: i === 4 && s.clickable ? "rgba(255,167,38,0.06)" : S.statBox.background }}>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 900, color: s.color, lineHeight: 1.1 }}>{s.val}</div>
-            <div style={S.statLabel}>{s.label}{i === 3 && s.clickable ? " 📥" : ""}</div>
+            <div style={S.statLabel}>{s.label}{i === 4 && s.clickable ? " 📥" : ""}</div>
           </div>
         ))}
       </div>
@@ -4634,14 +4626,6 @@ export default function App() {
           <div style={{ fontSize: 20, marginBottom: 6 }}>👤</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Clients</div>
           <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{clients.length} client{clients.length !== 1 ? "s" : ""}</div>
-        </div>
-        <div onClick={() => setPage("stock")}
-          style={{ background: "linear-gradient(135deg,rgba(0,245,147,0.08),rgba(0,212,255,0.05))", borderRadius: 16, padding: "14px 14px", border: statsData.alertCount > 0 ? "1px solid rgba(255,71,87,0.3)" : "1px solid rgba(0,245,147,0.25)", cursor: "pointer" }}>
-          <div style={{ fontSize: 20, marginBottom: 6 }}>📦</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Stock</div>
-          <div style={{ fontSize: 10, color: statsData.alertCount > 0 ? "#ff4757" : "#5a6585", marginTop: 3, fontWeight: statsData.alertCount > 0 ? 700 : 400 }}>
-            {statsData.alertCount > 0 ? `⚠ ${statsData.alertCount} alerte${statsData.alertCount > 1 ? "s" : ""}` : `${products.filter(p => !stock[p.id]?.init).length} suivis`}
-          </div>
         </div>
         <div onClick={() => { setXhorseTab(true); setPage("recherche"); setTimeout(() => setXhorseTab(false), 100); }}
           style={{ background: "linear-gradient(135deg,rgba(234,88,12,0.08),rgba(249,115,22,0.04))", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(234,88,12,0.25)", cursor: "pointer" }}>
@@ -4674,37 +4658,33 @@ export default function App() {
         </div>
       </div>
 
-      <div style={S.sectionTitle}>Catalogue ({products.length} clé{products.length !== 1 ? "s" : ""})</div>
+      <div style={S.sectionTitle}>Recherche par référence</div>
       <div style={{ position: "relative", marginBottom: 10 }}>
         <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
         <input style={S.searchInput} placeholder="Référence, lame, transpondeur…"
           value={search} onChange={e => setSearch(e.target.value)} />
         {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#5a6585", fontSize: 16 }}>✕</button>}
       </div>
-      {products.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "#5a6585" }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>🔑</div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Catalogue vide</div>
-          <div style={{ fontSize: 12, marginTop: 6 }}>Ajoutez des clés depuis l'onglet Véhicule</div>
-        </div>
-      ) : filtered.length === 0 && search.trim() ? (
-        <div style={{ textAlign: "center", padding: "24px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat pour « {search} »</div>
-      ) : (search.trim() ? filtered : products).map(p => {
-        const s = stock[p.id];
-        const isInit = s?.init;
-        const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
-        return (
-          <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
-            <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
-            <div style={S.cardBody}>
-              <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
-              <div style={S.cardName}>{p.nom}</div>
-              <div style={S.cardRef}>{p.ref}</div>
-              <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
+      {search.trim() && (
+        filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat pour « {search} »</div>
+        ) : filtered.map(p => {
+          const s = stock[p.id];
+          const isInit = s?.init;
+          const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
+          return (
+            <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
+              <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
+              <div style={S.cardBody}>
+                <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
+                <div style={S.cardName}>{p.nom}</div>
+                <div style={S.cardRef}>{p.ref}</div>
+                <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 
@@ -4712,85 +4692,6 @@ export default function App() {
 
 
 
-
-  // ============================================================
-  // ======================== RENDER STOCK =====================
-  // ============================================================
-  const renderStock = () => {
-    const stockProducts = products.filter(p => { const s = stock[p.id]; return s && s.init === false; });
-    const catalogueOnly = products.filter(p => { const s = stock[p.id]; return !s || s.init === true; });
-    const displayList = stockFilter === "alert"
-      ? stockProducts.filter(p => { const s = stock[p.id]; return s.qty <= (s.seuil ?? SEUIL_DEFAULT); })
-      : stockFilter === "ok"
-      ? stockProducts.filter(p => { const s = stock[p.id]; return s.qty > (s.seuil ?? SEUIL_DEFAULT); })
-      : stockProducts;
-    return (
-      <div style={S.page}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 16 }}>
-          {[
-            { val: stockProducts.length, label: "Suivis", color: "#6c63ff" },
-            { val: statsData.alertCount, label: "Alertes", color: statsData.alertCount > 0 ? "#ff4757" : "#00f593" },
-            { val: statsData.valeurStock.toFixed(0) + "€", label: "Valeur", color: "#00d4ff" },
-          ].map((item, i) => (
-            <div key={i} style={S.statBox}>
-              <div style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 17, fontWeight: 900, color: item.color }}>{item.val}</div>
-              <div style={S.statLabel}>{item.label}</div>
-            </div>
-          ))}
-        </div>
-        <div style={S.filterRow}>
-          {[["all","Tous"], ["alert","⚠ Alertes"], ["ok","✓ OK"]].map(([k, lbl]) => (
-            <button key={k} onClick={() => setStockFilter(k)} style={S.filterBtn(stockFilter === k)}>{lbl}</button>
-          ))}
-        </div>
-        {displayList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "30px 0", color: "#5a6585", fontSize: 13 }}>
-            {stockProducts.length === 0
-              ? <><div style={{ fontSize: 32, marginBottom: 8 }}>📦</div><div style={{ fontWeight: 700 }}>Aucun produit en suivi stock</div><div style={{ fontSize: 11, marginTop: 6 }}>Ajoutez une clé via Véhicule ➜ 📦 Stock</div></>
-              : "Aucun résultat pour ce filtre"}
-          </div>
-        ) : displayList.map(p => {
-          const s = stock[p.id];
-          const isLow = s.qty <= (s.seuil ?? SEUIL_DEFAULT);
-          return (
-            <div key={p.id} style={S.stockCard} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
-              <img src={p.image} alt={p.nom} style={S.stockCardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
-                <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2 }}>{p.ref} · {p.categorie}</div>
-                {isLow && <div style={{ fontSize: 10, color: "#ff4757", fontWeight: 700, marginTop: 3 }}>⚠ Réappro. nécessaire</div>}
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 22, fontWeight: 900, color: isLow ? "#ff4757" : "#00b87a" }}>{s.qty}</div>
-                <div style={{ fontSize: 9, color: "#5a6585" }}>/ seuil {s.seuil ?? SEUIL_DEFAULT}</div>
-              </div>
-            </div>
-          );
-        })}
-        {catalogueOnly.length > 0 && (
-          <>
-            <div style={{ ...S.sectionTitle, marginTop: 20 }}>Catalogue sans suivi ({catalogueOnly.length})</div>
-            {catalogueOnly.map(p => (
-              <div key={p.id} style={{ ...S.stockCard, opacity: 0.75 }}>
-                <img src={p.image} alt={p.nom} style={S.stockCardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
-                  <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2 }}>{p.ref}</div>
-                </div>
-                <button onClick={(e) => {
-                  e.stopPropagation();
-                  setStock(prev => ({ ...prev, [p.id]: { ...(prev[p.id] || {}), qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: false } }));
-                  showToast("📦 Suivi activé : " + p.nom);
-                }} style={{ padding: "6px 10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.3)", background: "transparent", color: "#6c63ff", fontWeight: 700, fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>
-                  + Activer
-                </button>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-    );
-  };
 
   // ============================================================
   // ================== RENDER CLIENT DETAIL ===================
@@ -5415,9 +5316,10 @@ export default function App() {
             {[
               { key: "home",      icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, label: "Accueil" },
               { key: "recherche", icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, label: "Véhicule" },
-              { key: "stock",     icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>, label: "Stock", badge: statsData.alertCount },
               { key: "clients",   icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "Clients" },
+
               { key: "stats",     icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, label: "Stats" },
+              { key: "settings",  icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, label: "Réglages" },
             ].map(item => (
               <button key={item.key} onClick={() => setPage(item.key)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", padding: "4px 0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 <div style={{ width: 36, height: 28, borderRadius: 10, background: page === item.key ? "linear-gradient(135deg,#6c63ff22,#00d4ff22)" : "transparent", border: page === item.key ? "1px solid rgba(108,99,255,0.4)" : "1px solid transparent", display: "flex", alignItems: "center", justifyContent: "center", color: page === item.key ? "#6c63ff" : "#5a6585", transition: "all 0.2s" }}>
@@ -5437,24 +5339,34 @@ export default function App() {
             setSelectedProduct={setSelectedProduct}
             setPage={setPage}
             setIntervFormProduct={function(p) { setIntervFormProduct(p); setShowIntervForm(true); }}
-
+            initialSearch={search}
+            initialTab={xhorseTab ? "xhorse" : undefined}
             oeLinksOverrides={oeLinksOverrides}
             setOeLinksOverrides={setOeLinksOverrides}
             onShowAddProduit={() => setShowUrlImport(true)}
-            onAddToCatalogue={function(vp) {
-              var newProd = buildProd(vp);
-              setProducts(function(prev) {
-                if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
-                return [...prev, newProd];
-              });
-              setStock(function(prev) {
-                if (prev[newProd.id]) return prev;
-                return { ...prev, [newProd.id]: { qty: 0, seuil: 3, historique: [], init: true } };
-              });
-              showToast("📋 " + newProd.nom + " ajouté au catalogue !");
-            }}
             onAddToStock={function(vp) {
-              var newProd = buildProd(vp);
+              var newProd = {
+                ...vp,
+                id: vp.id,
+                nom: vp.nom,
+                lame: vp.lame || vp.blade || "",
+                transpondeur: vp.transpondeur || vp.transponder || "",
+                freq: vp.freq || vp.frequence || "433 MHz",
+                type: vp.type || "Clé aftermarket",
+                ref: vp.ref || "",
+                marque: vp.marque || vp.marqueVehicule || "",
+                modeles: vp.modeles || vp.vehiculesCompatibles || "",
+                prix: vp.prix || 0,
+                categorie: vp.categorie || "Aftermarket France",
+                emoji: vp.emoji || "🔑",
+                image: vp.image || null,
+                xhorse: vp.xhorse || null,
+                remotes: vp.remotes || null,
+                prox: vp.prox || false,
+                lien: vp.lien || "",
+                oeLinks: vp.oeLinks || [],
+                notes: vp.notes || "",
+              };
               setProducts(function(prev) {
                 if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
                 return [...prev, newProd];
@@ -5463,7 +5375,7 @@ export default function App() {
                 if (prev[newProd.id]) return prev;
                 return { ...prev, [newProd.id]: { qty: 0, seuil: 3, historique: [], init: false } };
               });
-              showToast("📦 " + newProd.nom + " ajouté au stock !");
+              showToast("✅ " + newProd.nom + " ajouté au stock !");
             }}
           />
         )}
@@ -5507,7 +5419,6 @@ export default function App() {
         )}
 
         {page === "clients" && renderClients()}
-        {page === "stock" && renderStock()}
         {page === "devis" && renderDevis()}
         {page === "clientDetail" && selectedClient && renderClientDetail()}
         {page === "stats" && renderStats()}
