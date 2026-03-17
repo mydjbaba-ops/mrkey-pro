@@ -3693,11 +3693,11 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                 + Intervention
               </button>
             : <div style={{ display: "flex", gap: 5, flex: 1 }}>
-                <button onClick={function() { onAddToCatalogue && onAddToCatalogue(p); }}
+                <button onClick={function() { onAddToCatalogue && onAddToCatalogue({ ...p, image: p.image || getKeyImage(p.lame) }); }}
                   style={{ flex: 1, padding: "9px 4px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.3)", background: "transparent", color: "#6c63ff", fontWeight: 700, fontSize: 10, cursor: "pointer" }}>
                   📋 Catalogue
                 </button>
-                <button onClick={function() { onAddToStock && onAddToStock(p); }}
+                <button onClick={function() { onAddToStock && onAddToStock({ ...p, image: p.image || getKeyImage(p.lame) }); }}
                   style={{ flex: 1, padding: "9px 4px", borderRadius: 10, border: "none", background: grad1, color: "#fff", fontWeight: 700, fontSize: 10, cursor: "pointer" }}>
                   📦 Stock
                 </button>
@@ -3877,56 +3877,20 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                             <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
                             <button onClick={function() {
                                 if (alreadyAdded) return;
-                                var newProd = {
-                                  id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
-                                  nom: entry.nom,
-                                  marque: xhorseMarque,
-                                  modeles: "",
-                                  freq: entry.freq,
-                                  transpondeur: entry.transpondeur || "",
-                                  type: "Xhorse",
-                                  ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx,
-                                  prix: 0,
-                                  categorie: "Xhorse",
-                                  emoji: "🔑",
-                                  image: keyPhoto || entry.image,
-                                  remotes: entry.remotes,
-                                  xhorse: entry.remotes.join(", "),
-                                  prox: entry.prox || false,
-                                };
+                                var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: "", freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx, prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
                                 onAddToCatalogue && onAddToCatalogue(newProd);
                                 setStockAdded(function(prev) { return { ...prev, [entryKey]: "catalogue" }; });
                               }}
-                              style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "1px solid rgba(234,88,12,0.35)",
-                                background: alreadyAdded === "catalogue" ? "#4ade80" : "transparent",
-                                color: alreadyAdded === "catalogue" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 10, cursor: alreadyAdded ? "default" : "pointer" }}>
+                              style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "1px solid rgba(234,88,12,0.35)", background: alreadyAdded === "catalogue" ? "#4ade80" : "transparent", color: alreadyAdded === "catalogue" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 10, cursor: alreadyAdded ? "default" : "pointer" }}>
                               {alreadyAdded === "catalogue" ? "✓ Catalogue" : "📋 Catalogue"}
                             </button>
                             <button onClick={function() {
                                 if (alreadyAdded === "stock") return;
-                                var newProd = {
-                                  id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
-                                  nom: entry.nom,
-                                  marque: xhorseMarque,
-                                  modeles: "",
-                                  freq: entry.freq,
-                                  transpondeur: entry.transpondeur || "",
-                                  type: "Xhorse",
-                                  ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx,
-                                  prix: 0,
-                                  categorie: "Xhorse",
-                                  emoji: "🔑",
-                                  image: keyPhoto || entry.image,
-                                  remotes: entry.remotes,
-                                  xhorse: entry.remotes.join(", "),
-                                  prox: entry.prox || false,
-                                };
+                                var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: "", freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx, prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
                                 onAddToStock && onAddToStock(newProd);
                                 setStockAdded(function(prev) { return { ...prev, [entryKey]: "stock" }; });
                               }}
-                              style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "none",
-                                background: alreadyAdded === "stock" ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)",
-                                color: "#fff", fontWeight: 800, fontSize: 10, cursor: alreadyAdded === "stock" ? "default" : "pointer" }}>
+                              style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "none", background: alreadyAdded === "stock" ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff", fontWeight: 800, fontSize: 10, cursor: alreadyAdded === "stock" ? "default" : "pointer" }}>
                               {alreadyAdded === "stock" ? "✓ Stock" : "📦 Stock"}
                             </button>
                             </div>
@@ -3988,56 +3952,20 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                               <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
                               <button onClick={function() {
                                   if (alreadyAdded) return;
-                                  var newProd = {
-                                    id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
-                                    nom: entry.nom,
-                                    marque: xhorseMarque,
-                                    modeles: modele,
-                                    freq: entry.freq,
-                                    transpondeur: entry.transpondeur || "",
-                                    type: "Xhorse",
-                                    ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(),
-                                    prix: 0,
-                                    categorie: "Xhorse",
-                                    emoji: "🔑",
-                                    image: keyPhoto || entry.image,
-                                    remotes: entry.remotes,
-                                    xhorse: entry.remotes.join(", "),
-                                    prox: entry.prox || false,
-                                  };
+                                  var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: modele, freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(), prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
                                   onAddToCatalogue && onAddToCatalogue(newProd);
                                   setStockAdded(function(prev) { return { ...prev, [entryKey]: "catalogue" }; });
                                 }}
-                                style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "1px solid rgba(234,88,12,0.35)",
-                                  background: alreadyAdded === "catalogue" ? "#4ade80" : "transparent",
-                                  color: alreadyAdded === "catalogue" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 10, cursor: alreadyAdded ? "default" : "pointer" }}>
+                                style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "1px solid rgba(234,88,12,0.35)", background: alreadyAdded === "catalogue" ? "#4ade80" : "transparent", color: alreadyAdded === "catalogue" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 10, cursor: alreadyAdded ? "default" : "pointer" }}>
                                 {alreadyAdded === "catalogue" ? "✓ Catalogue" : "📋 Catalogue"}
                               </button>
                               <button onClick={function() {
                                   if (alreadyAdded === "stock") return;
-                                  var newProd = {
-                                    id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
-                                    nom: entry.nom,
-                                    marque: xhorseMarque,
-                                    modeles: modele,
-                                    freq: entry.freq,
-                                    transpondeur: entry.transpondeur || "",
-                                    type: "Xhorse",
-                                    ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(),
-                                    prix: 0,
-                                    categorie: "Xhorse",
-                                    emoji: "🔑",
-                                    image: keyPhoto || entry.image,
-                                    remotes: entry.remotes,
-                                    xhorse: entry.remotes.join(", "),
-                                    prox: entry.prox || false,
-                                  };
+                                  var newProd = { id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(), nom: entry.nom, marque: xhorseMarque, modeles: modele, freq: entry.freq, transpondeur: entry.transpondeur || "", type: "Xhorse", ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(), prix: 0, categorie: "Xhorse", emoji: "🔑", image: keyPhoto || entry.image, remotes: entry.remotes, xhorse: entry.remotes.join(", "), prox: entry.prox || false };
                                   onAddToStock && onAddToStock(newProd);
                                   setStockAdded(function(prev) { return { ...prev, [entryKey]: "stock" }; });
                                 }}
-                                style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "none",
-                                  background: alreadyAdded === "stock" ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)",
-                                  color: "#fff", fontWeight: 800, fontSize: 10, cursor: alreadyAdded === "stock" ? "default" : "pointer" }}>
+                                style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: "none", background: alreadyAdded === "stock" ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff", fontWeight: 800, fontSize: 10, cursor: alreadyAdded === "stock" ? "default" : "pointer" }}>
                                 {alreadyAdded === "stock" ? "✓ Stock" : "📦 Stock"}
                               </button>
                               </div>
@@ -4490,7 +4418,7 @@ export default function App() {
       prix: vp.prix || 0,
       categorie: vp.categorie || "Aftermarket France",
       emoji: vp.emoji || "🔑",
-      image: vp.image || null,
+      image: vp.image || vp.img || null,
       xhorse: vp.xhorse || null,
       remotes: vp.remotes || null,
       prox: vp.prox || false,
@@ -4704,7 +4632,7 @@ export default function App() {
           <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{clients.length} client{clients.length !== 1 ? "s" : ""}</div>
         </div>
         <div onClick={() => setPage("stock")}
-          style={{ background: "linear-gradient(135deg,rgba(0,245,147,0.08),rgba(0,212,255,0.05))", borderRadius: 16, padding: "14px 14px", border: `1px solid ${statsData.alertCount > 0 ? "rgba(255,71,87,0.3)" : "rgba(0,245,147,0.25)"}`, cursor: "pointer" }}>
+          style={{ background: "linear-gradient(135deg,rgba(0,245,147,0.08),rgba(0,212,255,0.05))", borderRadius: 16, padding: "14px 14px", border: statsData.alertCount > 0 ? "1px solid rgba(255,71,87,0.3)" : "1px solid rgba(0,245,147,0.25)", cursor: "pointer" }}>
           <div style={{ fontSize: 20, marginBottom: 6 }}>📦</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Stock</div>
           <div style={{ fontSize: 10, color: statsData.alertCount > 0 ? "#ff4757" : "#5a6585", marginTop: 3, fontWeight: statsData.alertCount > 0 ? 700 : 400 }}>
@@ -4785,23 +4713,15 @@ export default function App() {
   // ======================== RENDER STOCK =====================
   // ============================================================
   const renderStock = () => {
-    const stockProducts = products.filter(p => {
-      const s = stock[p.id];
-      return s && s.init === false;
-    });
-    const catalogueOnly = products.filter(p => {
-      const s = stock[p.id];
-      return !s || s.init === true;
-    });
+    const stockProducts = products.filter(p => { const s = stock[p.id]; return s && s.init === false; });
+    const catalogueOnly = products.filter(p => { const s = stock[p.id]; return !s || s.init === true; });
     const displayList = stockFilter === "alert"
       ? stockProducts.filter(p => { const s = stock[p.id]; return s.qty <= (s.seuil ?? SEUIL_DEFAULT); })
       : stockFilter === "ok"
       ? stockProducts.filter(p => { const s = stock[p.id]; return s.qty > (s.seuil ?? SEUIL_DEFAULT); })
       : stockProducts;
-
     return (
       <div style={S.page}>
-        {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 16 }}>
           {[
             { val: stockProducts.length, label: "Suivis", color: "#6c63ff" },
@@ -4814,19 +4734,15 @@ export default function App() {
             </div>
           ))}
         </div>
-
-        {/* Filtres */}
         <div style={S.filterRow}>
           {[["all","Tous"], ["alert","⚠ Alertes"], ["ok","✓ OK"]].map(([k, lbl]) => (
             <button key={k} onClick={() => setStockFilter(k)} style={S.filterBtn(stockFilter === k)}>{lbl}</button>
           ))}
         </div>
-
-        {/* Liste produits suivis */}
         {displayList.length === 0 ? (
           <div style={{ textAlign: "center", padding: "30px 0", color: "#5a6585", fontSize: 13 }}>
             {stockProducts.length === 0
-              ? <><div style={{ fontSize: 32, marginBottom: 8 }}>📦</div><div>Aucun produit en suivi stock.<br/>Ajoutez une clé via "Véhicule" → 📦 Stock</div></>
+              ? <><div style={{ fontSize: 32, marginBottom: 8 }}>📦</div><div style={{ fontWeight: 700 }}>Aucun produit en suivi stock</div><div style={{ fontSize: 11, marginTop: 6 }}>Ajoutez une clé via Véhicule ➜ 📦 Stock</div></>
               : "Aucun résultat pour ce filtre"}
           </div>
         ) : displayList.map(p => {
@@ -4847,13 +4763,9 @@ export default function App() {
             </div>
           );
         })}
-
-        {/* Catalogue sans suivi */}
         {catalogueOnly.length > 0 && (
           <>
-            <div style={{ ...S.sectionTitle, marginTop: 20 }}>
-              Catalogue sans suivi ({catalogueOnly.length})
-            </div>
+            <div style={{ ...S.sectionTitle, marginTop: 20 }}>Catalogue sans suivi ({catalogueOnly.length})</div>
             {catalogueOnly.map(p => (
               <div key={p.id} style={{ ...S.stockCard, opacity: 0.75 }}>
                 <img src={p.image} alt={p.nom} style={S.stockCardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
