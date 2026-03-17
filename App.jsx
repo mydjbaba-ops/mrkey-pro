@@ -4490,7 +4490,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
 
   const handleConfirm = () => {
     const newErrors = {};
-    REQUIRED.forEach(k => { if (!form[k]?.trim()) newErrors[k] = true; });
+    REQUIRED.forEach(k => { if (!form[k]?.toString().trim()) newErrors[k] = true; });
     if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
     const newProd = {
       id: "manuel-" + Date.now(),
@@ -4499,6 +4499,8 @@ function UrlProductImport({ onProductCreated, onClose }) {
       marque: form.marque.trim() || "Autre",
       modeles: form.modeles.trim(),
       annees: form.annees.trim(),
+      boutons: form.boutons.toString().trim(),
+      mainLibre: form.mainLibre,
       prix: parseFloat(form.prix) || 0,
       categorie: "Aftermarket France",
       type: form.type || "Clé",
@@ -4506,8 +4508,6 @@ function UrlProductImport({ onProductCreated, onClose }) {
       transpondeur: form.transpondeur.trim(),
       lame: form.lame.trim(),
       pile: form.pile.trim(),
-      boutons: form.boutons.trim(),
-      mainLibre: form.mainLibre,
       emoji: "🔑",
       image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
@@ -4516,21 +4516,17 @@ function UrlProductImport({ onProductCreated, onClose }) {
     onProductCreated(newProd);
   };
 
-  const inp = (hasError) => ({
-    width: "100%", background: hasError ? "rgba(255,71,87,0.06)" : "#e8edf8",
-    border: `1px solid ${hasError ? "#ff4757" : "rgba(108,99,255,0.2)"}`,
-    borderRadius: 12, padding: "10px 12px", color: "#1a1d2e", fontSize: 13,
-    outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box",
-  });
-  const lbl = (required, hasError) => ({
-    fontSize: 11, fontWeight: 600,
-    color: hasError ? "#ff4757" : required ? "#1a1d2e" : "#5a6585",
-    marginBottom: 4, display: "block",
-  });
-  const row = { marginBottom: 11 };
-  const reqMark = <span style={{ color: "#ff4757", marginLeft: 2 }}>*</span>;
+  const baseInp = {
+    width: "100%", borderRadius: 12, padding: "10px 12px", color: "#1a1d2e",
+    fontSize: 13, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif",
+    boxSizing: "border-box",
+  };
+  const inp  = (err) => ({ ...baseInp, background: err ? "rgba(255,71,87,0.06)" : "#e8edf8", border: `1px solid ${err ? "#ff4757" : "rgba(108,99,255,0.2)"}` });
+  const lbl  = (req, err) => ({ fontSize: 11, fontWeight: 600, color: err ? "#ff4757" : req ? "#1a1d2e" : "#5a6585", marginBottom: 4, display: "block" });
+  const row  = { marginBottom: 11 };
+  const req  = <span style={{ color: "#ff4757", marginLeft: 2 }}>*</span>;
 
-  const missingCount = REQUIRED.filter(k => !form[k]?.trim()).length;
+  const missingCount = REQUIRED.filter(k => !form[k]?.toString().trim()).length;
   const canSubmit = missingCount === 0;
 
   return (
@@ -4538,7 +4534,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
       <div style={{ background: "#c8d0e8", borderRadius: "24px 24px 0 0", padding: "22px 20px 36px", width: "100%", maxHeight: "93vh", overflowY: "auto", boxShadow: "0 -8px 40px rgba(108,99,255,0.18)" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 800, color: "#1a1d2e" }}>➕ Ajouter un produit</div>
             <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Colle l'URL — l'IA remplit la fiche automatiquement</div>
@@ -4554,7 +4550,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
         )}
 
         {/* URL + analyser */}
-        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
+        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", marginBottom: 4, display: "block" }}>🔗 URL de la page produit</label>
           <div style={{ display: "flex", gap: 8 }}>
             <input value={form.lien} onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); }}
@@ -4563,7 +4559,9 @@ function UrlProductImport({ onProductCreated, onClose }) {
               style={{ ...inp(false), background: "#fff", flex: 1 }} autoFocus inputMode="url" />
             <button onClick={handleAnalyse} disabled={loading || !form.lien.trim()}
               style={{ flexShrink: 0, padding: "10px 14px", borderRadius: 12, border: "none", background: loading ? "#a0a0a0" : "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: loading || !form.lien.trim() ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-              {loading ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</> : "🔍 Analyser"}
+              {loading
+                ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</>
+                : "🔍 Analyser"}
             </button>
           </div>
           <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
@@ -4573,7 +4571,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
 
         {/* Nom */}
         <div style={row}>
-          <label style={lbl(true, errors.nom)}>Nom du produit{reqMark}</label>
+          <label style={lbl(true, errors.nom)}>Nom du produit{req}</label>
           <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 4 boutons 433MHz" style={inp(errors.nom)} />
         </div>
 
@@ -4596,7 +4594,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
             <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp(false)} />
           </div>
           <div>
-            <label style={lbl(false, false)}>Type</label>
+            <label style={lbl(false, false)}>Type produit</label>
             <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp(false), appearance: "none" }}>
               {["Clé","Télécommande","Coque","Transpondeur","Lame","Accessoire"].map(t => <option key={t}>{t}</option>)}
             </select>
@@ -4605,25 +4603,25 @@ function UrlProductImport({ onProductCreated, onClose }) {
 
         {/* Séparateur champs obligatoires */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "14px 0 12px" }}>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.2)" }} />
+          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.25)" }} />
           <span style={{ fontSize: 10, fontWeight: 700, color: "#ff4757", letterSpacing: 1, textTransform: "uppercase" }}>Champs obligatoires</span>
-          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.2)" }} />
+          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.25)" }} />
         </div>
 
-        {/* Modèles compatibles */}
+        {/* Modèles */}
         <div style={row}>
-          <label style={lbl(true, errors.modeles)}>Modèles compatibles{reqMark}</label>
+          <label style={lbl(true, errors.modeles)}>Modèles compatibles{req}</label>
           <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo" style={inp(errors.modeles)} />
         </div>
 
         {/* Années + Lame */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
           <div>
-            <label style={lbl(true, errors.annees)}>Années{reqMark}</label>
+            <label style={lbl(true, errors.annees)}>Années{req}</label>
             <input value={form.annees} onChange={e => set("annees", e.target.value)} placeholder="ex: 2012 – 2020" style={inp(errors.annees)} />
           </div>
           <div>
-            <label style={lbl(true, errors.lame)}>Type de lame{reqMark}</label>
+            <label style={lbl(true, errors.lame)}>Type de lame{req}</label>
             <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2, HU66" style={inp(errors.lame)} />
           </div>
         </div>
@@ -4631,7 +4629,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
         {/* Fréquence + Transpondeur */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
           <div>
-            <label style={lbl(true, errors.freq)}>Fréquence{reqMark}</label>
+            <label style={lbl(true, errors.freq)}>Fréquence{req}</label>
             <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433 MHz" style={inp(errors.freq)} />
           </div>
           <div>
@@ -4643,15 +4641,15 @@ function UrlProductImport({ onProductCreated, onClose }) {
         {/* Pile + Boutons + Main libre */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 11 }}>
           <div>
-            <label style={lbl(true, errors.pile)}>Type de pile{reqMark}</label>
-            <input value={form.pile} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp(errors.pile)} />
+            <label style={lbl(true, errors.pile)}>Type de pile{req}</label>
+            <input value={form.pile} onChange={e => set("pile", e.target.value)} placeholder="CR2032" style={inp(errors.pile)} />
           </div>
           <div>
-            <label style={lbl(true, errors.boutons)}>Nb boutons{reqMark}</label>
+            <label style={lbl(true, errors.boutons)}>Nb boutons{req}</label>
             <input type="number" min="1" max="10" value={form.boutons} onChange={e => set("boutons", e.target.value)} placeholder="ex: 3" style={inp(errors.boutons)} />
           </div>
           <div>
-            <label style={lbl(true, errors.mainLibre)}>Main libre{reqMark}</label>
+            <label style={lbl(true, errors.mainLibre)}>Main libre{req}</label>
             <select value={form.mainLibre} onChange={e => set("mainLibre", e.target.value)} style={{ ...inp(errors.mainLibre), appearance: "none", color: form.mainLibre ? "#1a1d2e" : "#8890aa" }}>
               <option value="">—</option>
               <option value="oui">Oui</option>
@@ -4678,7 +4676,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
           <button onClick={onClose} style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
             Annuler
           </button>
-          <button onClick={handleConfirm} disabled={!canSubmit}
+          <button onClick={handleConfirm}
             style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: canSubmit ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.25)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: canSubmit ? "pointer" : "default", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
             {canSubmit ? "✅ Créer la fiche produit" : `${missingCount} champ${missingCount > 1 ? "s" : ""} manquant${missingCount > 1 ? "s" : ""}`}
           </button>
