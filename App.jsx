@@ -324,6 +324,14 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           </div>
         )}
 
+        {!s ? (
+          <button
+            onClick={() => setStock(prev => ({ ...prev, [p.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true } }))}
+            style={{ width: "100%", marginTop: 14, padding: "14px 16px", borderRadius: 14, border: "1px solid rgba(0,245,147,0.3)", background: "rgba(0,245,147,0.07)", color: "#00b87a", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Ajouter au stock
+          </button>
+        ) : (
         <div style={{ background: "#e8edf8", borderRadius: 14, padding: 16, marginTop: 14, border: "1px solid rgba(108,99,255,0.12)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div>
@@ -368,6 +376,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
             <button style={{ padding: "10px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12 }} onClick={handleSetSeuil}>Seuil</button>
           </div>
         </div>
+        )}
 
         {ln && <a href={p.lien} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: ln.bg, color: ln.color, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, textDecoration: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}><DIcon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /> {ln.label}</a>}
         <a href={`https://www.google.com/search?q=${encodeURIComponent(p.nom)}`} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(66,133,244,0.25)", cursor: "pointer", background: "rgba(66,133,244,0.08)", color: "#2563eb", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, textDecoration: "none", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -4828,19 +4837,6 @@ export default function App() {
       : (stockFilter === "all" ? products : stockFilter === "low" ? lowStockProducts : products.filter(p => { const s = stock[p.id]; return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT); }));
     return (
     <div style={S.page}>
-      {/* Bouton ajouter produit */}
-      <button
-        onClick={() => setShowUrlImport(true)}
-        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 16, padding: "12px 16px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
-        <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>➕</div>
-        <div style={{ flex: 1, textAlign: "left" }}>
-          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit</div>
-          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Crée une fiche manuellement · colle l'URL fournisseur</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7, marginBottom: 14 }}>
         <div style={S.statBox}><div style={S.statNum}>{products.length}</div><div style={S.statLabel}>Total</div></div>
         <div style={{ ...S.statBox, border: "1px solid #ff6b6b33" }}><div style={{ ...S.statNum, color: "#ff6b6b" }}>{lowStockProducts.length}</div><div style={S.statLabel}>Stock bas</div></div>
@@ -5577,10 +5573,6 @@ export default function App() {
               setProducts(function(prev) {
                 if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
                 return [...prev, newProd];
-              });
-              setStock(function(prev) {
-                if (prev[newProd.id]) return prev;
-                return { ...prev, [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true } };
               });
               showToast("✅ " + newProd.nom + " ajouté au catalogue !");
             }}
