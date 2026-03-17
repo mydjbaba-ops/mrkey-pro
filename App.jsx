@@ -77,9 +77,20 @@ const Icon = ({ d, size = 20 }) => (
 );
 const SearchIcon = () => <Icon d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />;
 const KeyIcon = () => <Icon d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />;
-
-
-const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
+const AlertIcon = () => <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01" />;
+const PlusIcon = () => <Icon d="M12 5v14M5 12h14" />;
+const MinusIcon = () => <Icon d="M5 12h14" />;
+const BackIcon = () => <Icon d="M19 12H5M12 5l-7 7 7 7" />;
+const HistoryIcon = () => <Icon d="M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-3M3 4v4h4" />;
+const LinkIcon = () => <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />;
+const GoogleIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
 
 // ============================================================
 // =================== DETAIL PAGE COMPONENT =================
@@ -109,7 +120,10 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   const handleSetQty = () => {
     const val = parseInt(qtyRef.current?.value);
     if (!isNaN(val) && val >= 0) {
-      setStock(prev => { const cur = prev[p.id]; return { ...prev, [p.id]: { ...cur, qty: val, init: false, historique: [{ action: `=${val} (manuel)`, date: new Date().toLocaleDateString("fr-FR"), qty: val }, ...cur.historique.slice(0, 9)] } }; });
+      setStock(prev => {
+        const cur = prev[p.id] || { qty: 0, seuil: SEUIL_DEFAULT, historique: [] };
+        return { ...prev, [p.id]: { ...cur, qty: val, init: false, historique: [{ action: `=${val} (manuel)`, date: new Date().toLocaleDateString("fr-FR"), qty: val }, ...cur.historique.slice(0, 9)] } };
+      });
       if (qtyRef.current) qtyRef.current.value = "";
       showFlash("qty");
     }
@@ -118,7 +132,10 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   const handleSetSeuil = () => {
     const val = parseInt(seuilRef.current?.value);
     if (!isNaN(val) && val >= 0) {
-      setStock(prev => ({ ...prev, [p.id]: { ...prev[p.id], seuil: val, init: false } }));
+      setStock(prev => {
+        const cur = prev[p.id] || { qty: 0, seuil: SEUIL_DEFAULT, historique: [] };
+        return { ...prev, [p.id]: { ...cur, seuil: val, init: false } };
+      });
       if (seuilRef.current) seuilRef.current.value = "";
       showFlash("seuil");
     }
@@ -126,8 +143,8 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
 
   const adjustStock = (delta) => {
     setStock(prev => {
-      const cur = prev[p.id];
-      const newQty = Math.max(0, cur.qty + delta);
+      const cur = prev[p.id] || { qty: 0, seuil: SEUIL_DEFAULT, historique: [] };
+      const newQty = Math.max(0, (cur.qty ?? 0) + delta);
       return { ...prev, [p.id]: { ...cur, qty: newQty, init: false, historique: [{ action: delta > 0 ? `+${delta}` : `${delta}`, date: new Date().toLocaleDateString("fr-FR"), qty: newQty }, ...cur.historique.slice(0, 9)] } };
     });
   };
@@ -137,7 +154,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   return (
     <div style={{ paddingBottom: 90 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 15px", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.12)" }}>
-        <button onClick={() => setPage("home")} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
+        <button onClick={() => setPage("recherche")} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
           <DIcon d="M19 12H5M12 5l-7 7 7 7" /> Retour
         </button>
         <div style={{ flex: 1 }} />
@@ -145,7 +162,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           showDeleteConfirm ? (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#ff4757", fontWeight: 600 }}>Confirmer ?</span>
-              <button onClick={() => { onDelete(p.id); setPage("home"); }} style={{ background: "#ff4757", border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Oui</button>
+              <button onClick={() => { onDelete(p.id); setPage("recherche"); }} style={{ background: "#ff4757", border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>Oui</button>
               <button onClick={() => setShowDeleteConfirm(false)} style={{ background: "none", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 8, padding: "5px 10px", color: "#5a6585", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>Non</button>
             </div>
           ) : (
@@ -307,6 +324,14 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           </div>
         )}
 
+        {!s ? (
+          <button
+            onClick={() => setStock(prev => ({ ...prev, [p.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true } }))}
+            style={{ width: "100%", marginTop: 14, padding: "14px 16px", borderRadius: 14, border: "1px solid rgba(0,245,147,0.3)", background: "rgba(0,245,147,0.07)", color: "#00b87a", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Ajouter au stock
+          </button>
+        ) : (
         <div style={{ background: "#e8edf8", borderRadius: 14, padding: 16, marginTop: 14, border: "1px solid rgba(108,99,255,0.12)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div>
@@ -351,6 +376,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
             <button style={{ padding: "10px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12 }} onClick={handleSetSeuil}>Seuil</button>
           </div>
         </div>
+        )}
 
         {ln && <a href={p.lien} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: ln.bg, color: ln.color, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, textDecoration: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}><DIcon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /> {ln.label}</a>}
         <a href={`https://www.google.com/search?q=${encodeURIComponent(p.nom)}`} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(66,133,244,0.25)", cursor: "pointer", background: "rgba(66,133,244,0.08)", color: "#2563eb", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, textDecoration: "none", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -3005,7 +3031,7 @@ function SilcaPhoto({ entry }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // SilcaTab — onglet principal : 1 carte = 1 référence Silca = 1 seule image
 // ─────────────────────────────────────────────────────────────────────────────
-function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLinksOverrides, setOeLinksOverrides }) {
+function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLinksOverrides, setOeLinksOverrides, userProducts, setSelectedProduct, setPage }) {
   const [editingRef, setEditingRef] = useState(null);
   const overrides = oeLinksOverrides || {};
   const [filterMarque, setFilterMarque] = useState("");
@@ -3109,6 +3135,36 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
           </div>
         </div>
       </div>
+
+      {/* ─ Produits ajoutés manuellement ─ */}
+      {userProducts && userProducts.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          {userProducts.map(function(p) {
+            return (
+              <div key={p.id}
+                style={{ background: "#e8edf8", borderRadius: 14, padding: "11px 13px", marginBottom: 7,
+                  border: "1px solid rgba(204,0,0,0.2)", cursor: "pointer", display: "flex", alignItems: "center", gap: 11 }}
+                onClick={function() { setSelectedProduct && setSelectedProduct(p); setPage && setPage("detail"); }}>
+                <img src={p.image} alt={p.nom}
+                  onError={function(e) { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Crect width='60' height='60' rx='8' fill='%23e8edf8'/%3E%3Ctext x='30' y='38' text-anchor='middle' font-size='24'%3E%F0%9F%94%91%3C/text%3E%3C/svg%3E"; }}
+                  style={{ width: 56, height: 56, objectFit: "contain", borderRadius: 10, background: "#c8d0e8", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "#cc0000", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 2 }}>{p.marque} · {p.type || "Clé"}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#1a1d2e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
+                  <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2 }}>
+                    {p.ref && <span style={{ marginRight: 6, fontWeight: 600 }}>{p.ref}</span>}
+                    {p.lame && <span style={{ marginRight: 6 }}>Lame {p.lame}</span>}
+                    {p.freq && <span>{p.freq}</span>}
+                  </div>
+                  {p.modeles && <div style={{ fontSize: 10, color: "#5a6585", marginTop: 1 }}>{p.modeles}</div>}
+                </div>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#cc0000" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            );
+          })}
+          <div style={{ height: 1, background: "rgba(204,0,0,0.2)", margin: "10px 0 14px" }} />
+        </div>
+      )}
 
       {/* ─ Filtre type ─ */}
       <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
@@ -3525,12 +3581,13 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   );
 }
 
-function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
+function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
   const [marque, setMarque] = useState("");
   const [modele, setModele] = useState("");
   const [annee, setAnnee] = useState("");
   const [result, setResult] = useState(null);
-  const [activeTab, setActiveTab] = useState("xhorse");
+  const [freeSearch, setFreeSearch] = useState(initialSearch || "");
+  const [activeTab, setActiveTab] = useState(initialTab || "xhorse");
   const [xhorseMarque, setXhorseMarque] = useState("");
   const [xhorseModele, setXhorseModele] = useState("");
   const [keyPhoto, setKeyPhoto] = useState(null);
@@ -3592,6 +3649,18 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
     for (let y = veh.debut; y <= (veh.fin || 2025); y++) list.push(y);
     return list;
   }, [marque, modele]);
+
+  const freeResults = useMemo(() => {
+    if (!freeSearch.trim()) return [];
+    const q = freeSearch.toLowerCase();
+    return products.filter(function(p) {
+      return p.nom.toLowerCase().includes(q) ||
+        p.ref.toLowerCase().includes(q) ||
+        (p.lame && p.lame.toLowerCase().includes(q)) ||
+        (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
+        (p.marque && p.marque.toLowerCase().includes(q));
+    });
+  }, [freeSearch, products]);
 
   function handleSearch() {
     if (!marque || !modele) return;
@@ -3999,7 +4068,7 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
       )}
 
       {activeTab === "silca" && (
-        <SilcaTab onAddToStock={onAddToStock} stock={stock} bgCard={bgCard} accent={accent} textDim={textDim} textMid={textMid} oeLinksOverrides={oeLinksOverrides} setOeLinksOverrides={setOeLinksOverrides} />
+        <SilcaTab onAddToStock={onAddToStock} stock={stock} bgCard={bgCard} accent={accent} textDim={textDim} textMid={textMid} oeLinksOverrides={oeLinksOverrides} setOeLinksOverrides={setOeLinksOverrides} userProducts={products} setSelectedProduct={setSelectedProduct} setPage={setPage} />
       )}
 
     </div>
@@ -4168,6 +4237,8 @@ function InterventionForm({ clients, products, onSave, onClose, defaultClientId,
   );
 }
 
+const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
+
 // ============================================================
 // ============= AJOUT PRODUIT AVEC ANALYSE URL ===============
 // ============================================================
@@ -4187,29 +4258,57 @@ function UrlProductImport({ onProductCreated, onClose }) {
     setErrorMsg("");
     setAnalysed(false);
     try {
-      const res = await fetch("/api/analyse-produit", {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          messages: [{
+            role: "user",
+            content: `Visite cette page produit de clé automobile : ${url}
+Extrais TOUTES les informations suivantes et réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises markdown :
+{
+  "nom": "nom complet du produit",
+  "ref": "référence SKU du produit",
+  "prix": "prix en chiffres uniquement (ex: 24.99)",
+  "marque": "marque du véhicule (ex: Peugeot, Renault, BMW...)",
+  "type": "un parmi : Clé, Télécommande, Coque, Transpondeur, Lame, Accessoire",
+  "freq": "fréquence (ex: 433MHz, 868MHz)",
+  "transpondeur": "type de transpondeur (ex: ID46, ID48, PCF7941)",
+  "lame": "profil de lame (ex: VA2, HU83, SIP22)",
+  "pile": "type de pile (ex: CR2032, CR2016)",
+  "modeles": "modèles de véhicules compatibles séparés par des virgules",
+  "image": "URL directe de la photo principale du produit"
+}`
+          }]
+        })
       });
-      const data = await res.json();
-      if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
+      const data = await response.json();
+      const textBlock = data.content && data.content.find(b => b.type === "text");
+      if (!textBlock) throw new Error("Pas de réponse");
+      const clean = textBlock.text.replace(/```json|```/g, "").trim();
+      const jsonMatch = clean.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Format invalide");
+      const d = JSON.parse(jsonMatch[0]);
       setForm(prev => ({
         ...prev,
-        nom: data.nom || prev.nom,
-        ref: data.ref || prev.ref,
-        marque: data.marque || prev.marque,
-        modeles: data.modeles || prev.modeles,
-        prix: data.prix || prev.prix,
-        type: data.type || prev.type,
-        freq: data.freq || prev.freq,
-        transpondeur: data.transpondeur || prev.transpondeur,
-        lame: data.lame || prev.lame,
-        image: data.image || prev.image || "",
+        nom: d.nom || prev.nom,
+        ref: d.ref || prev.ref,
+        marque: d.marque || prev.marque,
+        modeles: d.modeles || prev.modeles,
+        prix: d.prix || prev.prix,
+        type: d.type || prev.type,
+        freq: d.freq || prev.freq,
+        transpondeur: d.transpondeur || prev.transpondeur,
+        lame: d.lame || prev.lame,
+        pile: d.pile || prev.pile || "",
+        image: d.image || prev.image || "",
       }));
       setAnalysed(true);
     } catch (e) {
-      setErrorMsg("Erreur réseau — vérifie ta connexion");
+      setErrorMsg("Erreur d'analyse — vérifie l'URL ou remplis manuellement");
     }
     setLoading(false);
   };
@@ -4379,12 +4478,14 @@ function UrlProductImport({ onProductCreated, onClose }) {
 // ============================================================
 export default function App() {
   const [page, setPage] = useState("home");
+  const [categorie, setCategorie] = useState("aftermarket");
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState(loadProducts);
   const [stock, setStock] = useState(initStock);
   const [showHistory, setShowHistory] = useState(null);
-
+  const [stockFilter, setStockFilter] = useState("all");
+  const [marqueFilter, setMarqueFilter] = useState("all");
   const [clients, setClients] = useState(() => { try { const s = localStorage.getItem(CLIENT_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
   const [interventions, setInterventions] = useState(() => { try { const s = localStorage.getItem(INTERV_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
   const [settings, setSettings] = useState(() => { try { const s = localStorage.getItem(SETTINGS_KEY); return s ? JSON.parse(s) : { nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" }; } catch { return { nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" }; } });
@@ -4406,7 +4507,7 @@ export default function App() {
   const [selectedDevis, setSelectedDevis] = useState(null);
   const [intervFormProduct, setIntervFormProduct] = useState(null);
   const [toast, setToast] = useState(null);
-
+  const [stockSearch, setStockSearch] = useState("");
   const [xhorseTab, setXhorseTab] = useState(false);
   const [showUrlImport, setShowUrlImport] = useState(false);
 
@@ -4415,19 +4516,30 @@ export default function App() {
     setTimeout(() => setToast(null), 2800);
   }
 
+  const aftermarketBrands = useMemo(() => {
+    return [...new Set(products.map(p => p.marque))].sort();
+  }, [products]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return products;
-    const q = search.toLowerCase();
-    return products.filter(p =>
-      p.nom.toLowerCase().includes(q) ||
-      p.ref.toLowerCase().includes(q) ||
-      p.marque.toLowerCase().includes(q) ||
-      (p.modeles && p.modeles.toLowerCase().includes(q)) ||
-      (p.lame && p.lame.toLowerCase().includes(q)) ||
-      (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
-      (p.type && p.type.toLowerCase().includes(q))
-    );
-  }, [search, products]);
+    let list = products;
+    if (categorie === "aftermarket") {
+      list = list.filter(p => p.categorie === "Aftermarket France");
+      if (marqueFilter !== "all") list = list.filter(p => p.marque === marqueFilter);
+    } else if (categorie === "xhorse") list = list.filter(p => p.categorie === "Xhorse");
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(p =>
+        p.nom.toLowerCase().includes(q) ||
+        p.ref.toLowerCase().includes(q) ||
+        p.marque.toLowerCase().includes(q) ||
+        (p.modeles && p.modeles.toLowerCase().includes(q)) ||
+        (p.lame && p.lame.toLowerCase().includes(q)) ||
+        (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
+        (p.type && p.type.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [categorie, search, marqueFilter, products]);
 
   const lowStockProducts = useMemo(() =>
     products.filter(p => {
@@ -4436,10 +4548,20 @@ export default function App() {
       return s?.qty <= (s?.seuil || SEUIL_DEFAULT);
     }), [stock]);
 
-
+  const stockFiltered = useMemo(() => {
+    if (stockFilter === "low") return products.filter(p => {
+      const s = stock[p.id];
+      return !s?.init && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
+    });
+    if (stockFilter === "ok") return products.filter(p => {
+      const s = stock[p.id];
+      return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT);
+    });
+    return products;
+  }, [stockFilter, stock, products]);
 
   const statsData = useMemo(() => {
-
+    const totalRefs = products.length;
     const okCount = products.filter(p => {
       const s = stock[p.id];
       return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT);
@@ -4455,8 +4577,17 @@ export default function App() {
       const manquant = Math.max(0, (s?.seuil || SEUIL_DEFAULT) + 2 - (s?.qty ?? 0));
       return sum + manquant * (p.prix || 0);
     }, 0);
-    return { okCount, alertCount, valeurStock, budgetCommande };
+    return { totalRefs, okCount, alertCount, valeurStock, budgetCommande };
   }, [stock, lowStockProducts, products]);
+
+  // Nettoyage au démarrage : purger les entrées stock init:true
+  useEffect(() => {
+    setStock(prev => {
+      const cleaned = {};
+      Object.entries(prev).forEach(([id, s]) => { if (!s.init) cleaned[id] = s; });
+      return cleaned;
+    });
+  }, []); // eslint-disable-line
 
   // Persist stock to localStorage on every change
   useEffect(() => {
@@ -4555,7 +4686,7 @@ export default function App() {
     manualBtn: { padding: "10px 16px", borderRadius: 12, border: "none", cursor: "pointer", background: XH.grad1, color: "#fff", fontWeight: 600, fontSize: 13, boxShadow: `0 4px 20px ${XH.accent}44`, fontFamily: "'Plus Jakarta Sans', sans-serif" },
     googleBtn: { width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(66,133,244,0.3)", cursor: "pointer", background: "rgba(66,133,244,0.1)", color: "#4285f4", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, fontFamily: "'Plus Jakarta Sans', sans-serif" },
     linkBtn: (bg, color) => ({ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: bg, color: color, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", fontFamily: "'Plus Jakarta Sans', sans-serif" }),
-
+    statsRow: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 20 },
     statBox: { background: "#e8edf8", borderRadius: 16, padding: "14px 6px", border: `1px solid ${XH.border}`, textAlign: "center", position: "relative", overflow: "hidden" },
     statNum: { fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, color: XH.accent },
     statLabel: { fontSize: 8, color: "#5a6585", fontWeight: 600, textTransform: "uppercase", marginTop: 4, letterSpacing: 0.6 },
@@ -4574,22 +4705,31 @@ export default function App() {
   // =================== RENDERS ===================
   const renderHome = () => (
     <div style={S.page}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
+      <div style={S.statsRow}>
         {[
+          { val: statsData.totalRefs, label: "Réfs", color: "#6c63ff" },
           { val: statsData.okCount, label: "OK", color: "#00f593" },
           { val: statsData.alertCount, label: "Alertes", color: statsData.alertCount > 0 ? "#ff4757" : "#00f593" },
           { val: statsData.valeurStock.toFixed(0) + "€", label: "Valeur", color: "#00d4ff" },
           { val: statsData.budgetCommande.toFixed(0) + "€", label: "Budget", color: "#ffa726", clickable: statsData.alertCount > 0 },
         ].map((s, i) => (
-          <div key={i} className="mrkey-stat" onClick={i === 3 && s.clickable ? exportCSV : undefined}
-            style={{ ...S.statBox, cursor: i === 3 && s.clickable ? "pointer" : "default", background: i === 3 && s.clickable ? "rgba(255,167,38,0.06)" : S.statBox.background }}>
+          <div key={i} className="mrkey-stat" onClick={i === 4 && s.clickable ? exportCSV : undefined}
+            style={{ ...S.statBox, cursor: i === 4 && s.clickable ? "pointer" : "default", background: i === 4 && s.clickable ? "rgba(255,167,38,0.06)" : S.statBox.background }}>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 900, color: s.color, lineHeight: 1.1 }}>{s.val}</div>
-            <div style={S.statLabel}>{s.label}{i === 3 && s.clickable ? " 📥" : ""}</div>
+            <div style={S.statLabel}>{s.label}{i === 4 && s.clickable ? " 📥" : ""}</div>
           </div>
         ))}
       </div>
 
-
+      {lowStockProducts.length > 0 && (
+        <div style={{ ...S.alertBanner, cursor: "pointer" }} onClick={() => setPage("stock")}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,71,87,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><AlertIcon /></div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#ff4757" }}>⚠ {lowStockProducts.length} article{lowStockProducts.length > 1 ? "s" : ""} en stock bas</div>
+            <div style={{ fontSize: 10, color: "#8890aa", marginTop: 2, fontWeight: 600 }}>Toucher pour gérer le stock →</div>
+          </div>
+        </div>
+      )}
 
       <div style={S.sectionTitle}>Accès rapide</div>
 
@@ -4607,6 +4747,12 @@ export default function App() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div onClick={() => setPage("stock")}
+          style={{ background: "#e8edf8", borderRadius: 16, padding: "14px 14px", border: `1px solid ${lowStockProducts.length > 0 ? "rgba(255,107,107,0.3)" : "rgba(74,222,128,0.3)"}`, cursor: "pointer" }}>
+          <div style={{ fontSize: 20, marginBottom: 6 }}>📦</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Stock</div>
+          <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{lowStockProducts.length} alerte{lowStockProducts.length !== 1 ? "s" : ""}</div>
+        </div>
         <div onClick={() => setPage("clients")}
           style={{ background: "#e8edf8", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(96,165,250,0.3)", cursor: "pointer" }}>
           <div style={{ fontSize: 20, marginBottom: 6 }}>👤</div>
@@ -4625,176 +4771,132 @@ export default function App() {
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Devis</div>
           <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{devis.length} devis</div>
         </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         <div onClick={() => setPage("stats")}
-          style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.04))", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(108,99,255,0.15)", cursor: "pointer" }}>
-          <div style={{ fontSize: 20, marginBottom: 6 }}>📊</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Statistiques</div>
-          <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{interventions.length} intervention{interventions.length !== 1 ? "s" : ""}</div>
+          style={{ flex: 1, background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.04))", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,99,255,0.15)", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 18 }}>📊</div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>Statistiques</div>
+            <div style={{ fontSize: 10, color: "#5a6585" }}>{interventions.length} interventions</div>
+          </div>
         </div>
         <div onClick={() => setPage("settings")}
-          style={{ background: "#e8edf8", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(108,99,255,0.12)", cursor: "pointer", gridColumn: "span 2" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 20 }}>⚙️</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Paramètres</div>
-              <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2 }}>{settings.nom || "Non configuré"}</div>
-            </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a6585" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          style={{ flex: 1, background: "#e8edf8", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,99,255,0.12)", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 18 }}>⚙️</div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>Paramètres</div>
+            <div style={{ fontSize: 10, color: "#5a6585" }}>{settings.nom || "Non configuré"}</div>
           </div>
         </div>
       </div>
 
-      <div style={S.sectionTitle}>Catalogue ({products.length} clé{products.length !== 1 ? "s" : ""})</div>
+      <div style={S.sectionTitle}>Recherche par reference</div>
       <div style={{ position: "relative", marginBottom: 10 }}>
         <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
-        <input style={S.searchInput} placeholder="Référence, lame, transpondeur…"
+        <input style={S.searchInput} placeholder="Reference, lame, transpondeur…"
           value={search} onChange={e => setSearch(e.target.value)} />
-        {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#5a6585", fontSize: 16 }}>✕</button>}
       </div>
-      {products.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "#5a6585" }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>🔑</div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Catalogue vide</div>
-          <div style={{ fontSize: 12, marginTop: 6 }}>Ajoutez des clés depuis l'onglet Véhicule</div>
-        </div>
-      ) : filtered.length === 0 && search.trim() ? (
-        <div style={{ textAlign: "center", padding: "24px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat pour « {search} »</div>
-      ) : (search.trim() ? filtered : products).map(p => {
-        const s = stock[p.id];
-        const isInit = s?.init;
-        const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
-        return (
-          <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
-            <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
-            <div style={S.cardBody}>
-              <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
-              <div style={S.cardName}>{p.nom}</div>
-              <div style={S.cardRef}>{p.ref}</div>
-              <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 
-
-
-
-
-
-  // ============================================================
-  // ================== RENDER CLIENT DETAIL ===================
-  // ============================================================
-  const renderClientDetail = () => {
-    if (!selectedClient) return null;
-    const c = selectedClient;
-    const intervs = interventions.filter(i => i.clientId === c.id).sort((a, b) => new Date(b.date) - new Date(a.date));
-    const caTotal = intervs.reduce((s, i) => s + (parseFloat(i.prixTTC) || 0), 0);
-
-    const genererFacture = (interv) => {
-      const prod = products.find(p => p.id === interv.produitId);
-      const num = getNextNum("FAC");
-      const tva = (parseFloat(interv.prixTTC) - parseFloat(interv.prixHT)).toFixed(2);
-      setFactureUrl({ interv, prod, num, tva, client: c });
-    };
-
-    return (
-      <div style={{ paddingBottom: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 15px", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.12)", position: "sticky", top: 0, zIndex: 10 }}>
-          <button onClick={() => { setPage("clients"); setSelectedClient(null); }} style={{ background: "none", border: "none", color: "#6c63ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg> Retour
-          </button>
-          <div style={{ flex: 1, fontWeight: 800, fontSize: 15, color: "#1a1d2e" }}>{c.nom}</div>
-          <button onClick={() => setShowClientForm(c)} style={{ background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 8, padding: "6px 10px", color: "#6c63ff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✏️ Modifier</button>
-          <button onClick={() => {
-            if (window.confirm("Supprimer ce client et ses interventions ?")) {
-              setClients(prev => prev.filter(cl => cl.id !== c.id));
-              setInterventions(prev => prev.filter(iv => iv.clientId !== c.id));
-              setPage("clients");
-              setSelectedClient(null);
-              showToast("🗑 Client supprimé");
-            }
-          }} style={{ background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 8, padding: "6px 10px", color: "#ff4757", fontSize: 13, cursor: "pointer" }}>🗑</button>
+  const renderCatalogue = () => (
+    <div style={S.page}>
+      {/* URL Import Banner */}
+      <div
+        onClick={() => setShowUrlImport(true)}
+        style={{ display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 16, padding: "12px 14px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🔗</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit manuellement</div>
+          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Crée une fiche et colle l'URL du fournisseur pour référence</div>
         </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
 
-        <div style={{ padding: 18 }}>
-          <div style={{ background: "#e8edf8", borderRadius: 16, padding: 16, marginBottom: 14, border: "1px solid rgba(108,99,255,0.12)" }}>
-            {[["🚗", "Véhicule", c.vehicule], ["🔑", "Plaque", c.plaque], ["📱", "Téléphone", c.tel], ["📧", "Email", c.email], ["📍", "Adresse", c.adresse], ["🔢", "VIN", c.vin]].filter(([,, v]) => v).map(([ico, lbl, val]) => (
-              <div key={lbl} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
-                <span style={{ fontSize: 14 }}>{ico}</span>
-                <div><div style={{ fontSize: 9, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 0.8 }}>{lbl}</div><div style={{ fontSize: 13, fontWeight: 600, color: "#1a1d2e", marginTop: 1 }}>{val}</div></div>
+      <div style={{ position: "relative", marginBottom: 12 }}>
+        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
+        <input style={S.searchInput} placeholder="Nom, référence, marque, lame, transpondeur…"
+          value={search} onChange={e => setSearch(e.target.value)} autoFocus />
+      </div>
+      <div style={S.catRow}>
+        {[
+          { key: "aftermarket", label: "🇫🇷 Aftermarket" },
+          { key: "xhorse", label: "🔧 Xhorse" },
+        ].map(c => <button key={c.key} style={S.catBtn(categorie === c.key)} onClick={() => { setCategorie(c.key); setMarqueFilter("all"); }}>{c.label}</button>)}
+      </div>
+
+      {categorie === "aftermarket" && (
+        <div style={{ ...S.catRow, marginTop: -4, paddingBottom: 6, borderBottom: "1px solid #1e2535" }}>
+          <button style={{ ...S.catBtn(marqueFilter === "all"), fontSize: 10 }} onClick={() => setMarqueFilter("all")}>Toutes</button>
+          {aftermarketBrands.map(m => (
+            <button key={m} style={{ ...S.catBtn(marqueFilter === m), fontSize: 10 }} onClick={() => setMarqueFilter(m)}>{m}</button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 11, color: "#5a6585", marginBottom: 10 }}>{filtered.length} résultat{filtered.length > 1 ? "s" : ""}</div>
+
+      {(categorie === "aftermarket" && marqueFilter === "all" && !search.trim()) ? (
+        (() => {
+          const grouped = {};
+          filtered.forEach(p => {
+            if (!grouped[p.marque]) grouped[p.marque] = [];
+            grouped[p.marque].push(p);
+          });
+          return Object.entries(grouped).sort(([a],[b]) => a.localeCompare(b)).map(([marque, prods]) => {
+            const alertsInBrand = prods.filter(p => {
+              const s = stock[p.id];
+              return !s?.init && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
+            }).length;
+            return (
+            <div key={marque}>
+              <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 11, fontWeight: 800, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1.8, padding: "14px 4px 8px", borderBottom: "1px solid rgba(108,99,255,0.12)", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>🚗 {marque} <span style={{ color: "#3d4870", fontWeight: 600 }}>({prods.length})</span></span>
+                {alertsInBrand > 0 && <span style={{ background: "rgba(255,71,87,0.12)", color: "#ff4757", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 12, border: "1px solid rgba(255,71,87,0.25)" }}>⚠ {alertsInBrand}</span>}
               </div>
-            ))}
-            <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(108,99,255,0.1)" }}>
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: "#6c63ff" }}>{intervs.length}</div>
-                <div style={{ fontSize: 10, color: "#5a6585", fontWeight: 600 }}>Interventions</div>
-              </div>
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: "#00f593" }}>{caTotal.toFixed(2)}€</div>
-                <div style={{ fontSize: 10, color: "#5a6585", fontWeight: 600 }}>CA Total TTC</div>
+              {prods.map(p => {
+                const s = stock[p.id];
+                const isInit = s?.init;
+                const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
+                return (
+                  <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
+                    <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
+                    <div style={S.cardBody}>
+                      <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
+                      <div style={S.cardName}>{p.nom}</div>
+                      <div style={S.cardRef}>{p.ref}</div>
+                      <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );})
+        })()
+      ) : (
+        filtered.map(p => {
+          const s = stock[p.id];
+          const isInit = s?.init;
+          const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
+          return (
+            <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
+              <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
+              <div style={S.cardBody}>
+                <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
+                <div style={S.cardName}>{p.nom}</div>
+                <div style={S.cardRef}>{p.ref}</div>
+                <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
               </div>
             </div>
-          </div>
+          );
+        })
+      )}
+    </div>
+  );
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 700, color: "#3d4870", letterSpacing: 1.5, textTransform: "uppercase" }}>Interventions</div>
-            <button onClick={() => setShowIntervForm(true)} style={{ background: "linear-gradient(135deg,#6c63ff,#00d4ff)", border: "none", borderRadius: 10, padding: "8px 12px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>+ Ajouter</button>
-          </div>
-
-          {intervs.length === 0 && <div style={{ textAlign: "center", padding: "30px", color: "#5a6585", fontSize: 13 }}>Aucune intervention enregistrée</div>}
-
-          {intervs.map(interv => {
-            const prod = products.find(p => p.id === interv.produitId);
-            return (
-              <div key={interv.id} style={{ background: "#e8edf8", borderRadius: 14, padding: 14, marginBottom: 8, border: "1px solid rgba(108,99,255,0.12)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, color: "#5a6585", fontWeight: 600 }}>{interv.date}</div>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: "#6c63ff" }}>{interv.prixTTC} € TTC</div>
-                </div>
-                {prod && <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1d2e", marginBottom: 4 }}>{prod.nom}</div>}
-                {interv.note && <div style={{ fontSize: 11, color: "#5a6585", marginBottom: 8 }}>{interv.note}</div>}
-                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                  <button onClick={() => genererFacture(interv)} style={{ flex: 1, padding: "9px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#ffa726,#ff6b00)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                    📄 Voir facture
-                  </button>
-                  <a href={(() => { const pr = products.find(p => p.id === interv.produitId); const n = interv.numFacture || ("FAC-" + interv.id.slice(-6)); const tvaVal = (parseFloat(interv.prixTTC) - parseFloat(interv.prixHT)).toFixed(2); return `mailto:${c.email || ""}?subject=${encodeURIComponent("Facture " + n + " - MrKey Pro")}&body=${encodeURIComponent("Bonjour " + c.nom + ",\n\nVotre facture N° " + n + " du " + interv.date + ".\n\n" + (pr ? pr.nom : "Clé automobile") + " x" + (interv.qty || 1) + "\nHT : " + interv.prixHT + " €\nTVA 20% : " + tvaVal + " €\nTTC : " + interv.prixTTC + " €\n\nCordialement,\n" + (settings.nom || "MrKey Pro"))}`; })()}
-                    style={{ flex: 1, padding: "9px", borderRadius: 10, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                    ✉️ Mail
-                  </a>
-                  <button onClick={() => {
-                    if (window.confirm("Supprimer cette intervention ?")) {
-                      setInterventions(prev => prev.filter(iv => iv.id !== interv.id));
-                      showToast("🗑 Intervention supprimée");
-                    }
-                  }} style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(255,71,87,0.25)", background: "rgba(255,71,87,0.06)", color: "#ff4757", fontSize: 13, cursor: "pointer" }}>
-                    🗑
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {showClientForm && typeof showClientForm === "object" && (
-          <ClientForm initial={showClientForm} onSave={(updated) => {
-            setClients(prev => prev.map(cl => cl.id === c.id ? { ...cl, ...updated } : cl));
-            setSelectedClient(prev => ({ ...prev, ...updated }));
-            setShowClientForm(false);
-          }} onClose={() => setShowClientForm(false)} />
-        )}
-        {showIntervForm && (
-          <InterventionForm clients={clients} products={products} defaultClientId={c.id}
-            onSave={(interv) => { setInterventions(prev => [interv, ...prev]); setShowIntervForm(false); }}
-            onClose={() => setShowIntervForm(false)} />
-        )}
-      </div>
-    );
-  };
-
-  // ============================================================
-  // =================== RENDER DEVIS ==========================
   // ============================================================
   const renderDevis = () => {
     const statutColors = { en_attente: { bg: "rgba(255,167,38,0.12)", color: "#ffa726", label: "⏳ En attente" }, accepte: { bg: "rgba(0,245,147,0.12)", color: "#00b87a", label: "✅ Accepté" }, refuse: { bg: "rgba(255,71,87,0.12)", color: "#ff4757", label: "❌ Refusé" }, facture: { bg: "rgba(108,99,255,0.12)", color: "#6c63ff", label: "📄 Facturé" } };
@@ -5063,7 +5165,7 @@ export default function App() {
 
     const exportBackup = () => {
       const data = {
-
+        version: "MrKey-v10",
         date: new Date().toISOString(),
         products, stock, clients, interventions, devis, settings
       };
@@ -5294,9 +5396,14 @@ export default function App() {
               <div style={S.logoIcon}><KeyIcon /></div>
               <div style={{ flex: 1 }}>
                 <div style={S.logoText}>MrKey <span style={{ background: "linear-gradient(90deg,#6c63ff,#00d4ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Pro</span></div>
-                <div style={S.logoSub}>{products.length} </div>
+                <div style={S.logoSub}>{products.length} réf · {clients.length} clients · <span style={{ color: "#6c63ff", fontWeight: 700 }}>v10</span></div>
               </div>
-
+              {lowStockProducts.length > 0 && (
+                <div style={{ background: "rgba(255,71,87,0.12)", border: "1px solid rgba(255,71,87,0.3)", borderRadius: 20, padding: "5px 11px", display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }} onClick={() => setPage("stock")}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ff4757", display: "inline-block" }} />
+                  <span style={{ fontSize: 10, color: "#ff4757", fontWeight: 700 }}>{lowStockProducts.length} alerte{lowStockProducts.length > 1 ? "s" : ""}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -5307,7 +5414,6 @@ export default function App() {
               { key: "home",      icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, label: "Accueil" },
               { key: "recherche", icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>, label: "Véhicule" },
               { key: "clients",   icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "Clients" },
-
               { key: "stats",     icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, label: "Stats" },
               { key: "settings",  icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, label: "Réglages" },
             ].map(item => (
@@ -5329,7 +5435,8 @@ export default function App() {
             setSelectedProduct={setSelectedProduct}
             setPage={setPage}
             setIntervFormProduct={function(p) { setIntervFormProduct(p); setShowIntervForm(true); }}
-
+            initialSearch={search}
+            initialTab={xhorseTab === "silca" ? "silca" : xhorseTab ? "xhorse" : undefined}
             oeLinksOverrides={oeLinksOverrides}
             setOeLinksOverrides={setOeLinksOverrides}
             onShowAddProduit={() => setShowUrlImport(true)}
@@ -5360,11 +5467,7 @@ export default function App() {
                 if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
                 return [...prev, newProd];
               });
-              setStock(function(prev) {
-                if (prev[newProd.id]) return prev;
-                return { ...prev, [newProd.id]: { qty: 0, seuil: 3, historique: [], init: false } };
-              });
-              showToast("✅ " + newProd.nom + " ajouté au stock !");
+              showToast("✅ " + newProd.nom + " ajouté au catalogue !");
             }}
           />
         )}
@@ -5406,7 +5509,6 @@ export default function App() {
             }}
           />
         )}
-
         {page === "clients" && renderClients()}
         {page === "devis" && renderDevis()}
         {page === "clientDetail" && selectedClient && renderClientDetail()}
@@ -5510,18 +5612,12 @@ export default function App() {
         {showUrlImport && (
           <UrlProductImport
             onProductCreated={(newProd) => {
-              setProducts(prev => {
-                const updated = [newProd, ...prev];
-                return updated;
-              });
-              setStock(prev => ({
-                ...prev,
-                [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true },
-              }));
+              setProducts(prev => [newProd, ...prev]);
               setShowUrlImport(false);
-              setSelectedProduct(newProd);
-              setPage("detail");
-              showToast("✅ Fiche produit créée depuis l'URL !");
+              setXhorseTab("silca");
+              setPage("recherche");
+              setTimeout(() => setXhorseTab(false), 100);
+              showToast("✅ Fiche créée dans le catalogue !");
             }}
             onClose={() => setShowUrlImport(false)}
           />
