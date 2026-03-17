@@ -4822,19 +4822,6 @@ export default function App() {
       : (stockFilter === "all" ? products : stockFilter === "low" ? lowStockProducts : products.filter(p => { const s = stock[p.id]; return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT); }));
     return (
     <div style={S.page}>
-      {/* Bouton ajouter produit */}
-      <button
-        onClick={() => setShowUrlImport(true)}
-        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 16, padding: "12px 16px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
-        <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>➕</div>
-        <div style={{ flex: 1, textAlign: "left" }}>
-          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit</div>
-          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Crée une fiche manuellement · colle l'URL fournisseur</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7, marginBottom: 14 }}>
         <div style={S.statBox}><div style={S.statNum}>{products.length}</div><div style={S.statLabel}>Total</div></div>
         <div style={{ ...S.statBox, border: "1px solid #ff6b6b33" }}><div style={{ ...S.statNum, color: "#ff6b6b" }}>{lowStockProducts.length}</div><div style={S.statLabel}>Stock bas</div></div>
@@ -5567,11 +5554,19 @@ export default function App() {
                 lien: vp.lien || "",
                 oeLinks: vp.oeLinks || [],
                 notes: vp.notes || "",
+                applications: vp.applications || null,
+                buttons: vp.buttons || vp.boutons || null,
+                pile: vp.pile || "",
               };
+              // Ajoute dans products seulement si pas déjà présent
               setProducts(function(prev) {
-                if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
+                if (prev.some(function(p) { return p.id === newProd.id; })) {
+                  // Déjà présent — on met juste à jour
+                  return prev.map(p => p.id === newProd.id ? { ...p, ...newProd } : p);
+                }
                 return [...prev, newProd];
               });
+              // Initialise le stock
               setStock(function(prev) {
                 if (prev[newProd.id]) return prev;
                 return { ...prev, [newProd.id]: { qty: 0, seuil: 3, historique: [], init: false } };
