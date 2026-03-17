@@ -4184,6 +4184,211 @@ const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http:
 // ============================================================
 // ============= AJOUT PRODUIT AVEC ANALYSE URL ===============
 // ============================================================
+// ============================================================
+// =================== AFTERMARKET TAB =======================
+// ============================================================
+function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlImport, oeLinksOverrides, S }) {
+  const [search, setSearch] = React.useState("");
+  const [filterMarque, setFilterMarque] = React.useState("");
+  const [openRef, setOpenRef] = React.useState(null);
+
+  const marques = React.useMemo(() => [...new Set(SILCA_DB.map(e => e.marque))].sort(), []);
+
+  const filtered = React.useMemo(() => {
+    const seen = new Set();
+    const q = search.trim().toLowerCase();
+    return SILCA_DB.filter(e => {
+      if (seen.has(e.ref)) return false;
+      seen.add(e.ref);
+      if (filterMarque && e.marque !== filterMarque) return false;
+      if (q) return (
+        e.ref.toLowerCase().includes(q) ||
+        e.marque.toLowerCase().includes(q) ||
+        e.blade.toLowerCase().includes(q) ||
+        e.applications.some(a => a.make.toLowerCase().includes(q) || a.model.toLowerCase().includes(q))
+      );
+      return true;
+    });
+  }, [search, filterMarque]);
+
+  const isInStock = (ref) => products.some(p => p.ref === ref);
+
+  const handleAdd = (entry) => {
+    const id = "silca-" + entry.ref.replace(/[^a-zA-Z0-9]/g, "") + "-" + Date.now();
+    const mainApp = entry.applications[0];
+    onAddToStock({
+      id,
+      nom: (mainApp ? `${mainApp.make} ${mainApp.model}` : entry.marque) + " · " + entry.ref,
+      ref: entry.ref,
+      lame: entry.blade,
+      marque: mainApp ? mainApp.make : entry.marque,
+      modeles: entry.applications.map(a => a.model).join(", "),
+      transpondeur: entry.transponder || "",
+      freq: entry.freq || "",
+      type: entry.type === "P" ? "Proximité" : entry.type === "S" ? "Slot" : "Télécommande",
+      prix: 0,
+      categorie: "Aftermarket France",
+      emoji: "🔑",
+      image: getSilcaImage(entry.ref) || getSilcaSVG(entry.blade),
+      oeLinks: entry.oeLinks || [],
+    });
+  };
+
+  const TCOL = { P: "#6c63ff", S: "#0099cc", R: "#cc0000" };
+  const TLBL = { P: "Prox.", S: "Slot", R: "Remote" };
+
+  return (
+    <div style={{ paddingBottom: 110 }}>
+      {/* Bouton ajout par URL */}
+      <div style={{ padding: "12px 16px 0" }}>
+        <button onClick={onShowUrlImport}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 16, padding: "12px 16px", marginBottom: 12, cursor: "pointer" }}>
+          <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🔗</div>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1d2e" }}>Ajouter un produit par URL</div>
+            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 1 }}>Coller le lien d'une page fournisseur</div>
+          </div>
+        </button>
+      </div>
+
+      <div style={{ padding: "0 16px" }}>
+        {/* Recherche */}
+        <div style={{ position: "relative", marginBottom: 8 }}>
+          <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a1d2e" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            style={{ width: "100%", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 14, padding: "11px 36px", color: "#1a1d2e", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "'Plus Jakarta Sans',sans-serif" }}
+            placeholder="Référence, marque, modèle, lame…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#5a6585", fontSize: 16 }}>✕</button>}
+        </div>
+
+        {/* Filtre marque */}
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none", marginBottom: 10 }}>
+          <button onClick={() => setFilterMarque("")}
+            style={{ whiteSpace: "nowrap", padding: "6px 14px", borderRadius: 20, border: `1px solid ${!filterMarque ? "#6c63ff" : "rgba(108,99,255,0.2)"}`, background: !filterMarque ? "#6c63ff" : "transparent", color: !filterMarque ? "#fff" : "#3d4870", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+            Toutes
+          </button>
+          {marques.map(m => (
+            <button key={m} onClick={() => setFilterMarque(m === filterMarque ? "" : m)}
+              style={{ whiteSpace: "nowrap", padding: "6px 14px", borderRadius: 20, border: `1px solid ${filterMarque === m ? "#6c63ff" : "rgba(108,99,255,0.2)"}`, background: filterMarque === m ? "#6c63ff" : "transparent", color: filterMarque === m ? "#fff" : "#3d4870", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              {m}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, color: "#8890aa", marginBottom: 8 }}>{filtered.length} référence{filtered.length !== 1 ? "s" : ""}</div>
+
+        {filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: "30px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat</div>
+        )}
+
+        {filtered.map(entry => {
+          const inStock = isInStock(entry.ref);
+          const photo = getSilcaImage(entry.ref) || getSilcaSVG(entry.blade);
+          const oeLinks = (oeLinksOverrides && oeLinksOverrides[entry.ref]) ?? entry.oeLinks ?? [];
+          const apps = entry.applications.slice(0, 3);
+          const isOpen = openRef === entry.ref;
+          return (
+            <div key={entry.ref} style={{ background: "#e8edf8", borderRadius: 16, marginBottom: 8, border: `1px solid ${isOpen ? "rgba(108,99,255,0.3)" : inStock ? "rgba(0,245,147,0.3)" : "rgba(108,99,255,0.12)"}`, overflow: "hidden", transition: "border-color 0.15s" }}>
+
+              {/* ── Ligne principale (inchangée) ── */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px 10px 10px" }}>
+
+                {/* Photo — cliquable pour expand */}
+                <div onClick={() => setOpenRef(isOpen ? null : entry.ref)}
+                  style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#c8d0e8", border: "1px solid rgba(108,99,255,0.1)", cursor: "pointer" }}>
+                  <img src={photo} alt={entry.ref}
+                    onError={e => { e.target.src = getSilcaSVG(entry.blade); }}
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                </div>
+
+                {/* Infos — cliquables pour expand */}
+                <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setOpenRef(isOpen ? null : entry.ref)}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 3 }}>
+                    <span style={{ fontSize: 11, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff5050)", padding: "2px 8px", borderRadius: 5 }}>{entry.ref}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: TCOL[entry.type], background: TCOL[entry.type] + "18", border: "1px solid " + TCOL[entry.type] + "33", padding: "1px 6px", borderRadius: 4 }}>{TLBL[entry.type]}</span>
+                    {inStock && <span style={{ fontSize: 9, fontWeight: 800, color: "#00b87a", background: "rgba(0,245,147,0.12)", border: "1px solid rgba(0,245,147,0.3)", padding: "1px 6px", borderRadius: 4 }}>✓ STOCK</span>}
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1d2e", lineHeight: 1.4, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {apps.map(a => `${a.make} ${a.model}`).join(" · ")}{entry.applications.length > 3 ? ` +${entry.applications.length - 3}` : ""}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#8890aa" }}>Lame <b style={{ color: "#5a6080" }}>{entry.blade}</b> · {entry.freq}</div>
+                  {oeLinks.length > 0 && (
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
+                      {oeLinks.map((lnk, li) => (
+                        <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={{ fontSize: 10, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 6, padding: "2px 7px", textDecoration: "none" }}>
+                          🔗 {lnk.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Chevron + Bouton */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={() => inStock ? onViewStock() : handleAdd(entry)}
+                    style={{ padding: "8px 10px", borderRadius: 10, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", lineHeight: 1.3, textAlign: "center",
+                      background: inStock ? "rgba(0,245,147,0.12)" : "linear-gradient(135deg,#0284c7,#00d4ff)",
+                      color: inStock ? "#00b87a" : "#fff" }}>
+                    {inStock ? "📦\nStock" : "+ Ajouter\nau stock"}
+                  </button>
+                  <button onClick={() => setOpenRef(isOpen ? null : entry.ref)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#8890aa", padding: "2px 6px", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 2, transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Détail déplié ── */}
+              {isOpen && (
+                <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "12px 14px", background: "rgba(108,99,255,0.03)" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                    {entry.applications.length} véhicule{entry.applications.length > 1 ? "s" : ""} compatible{entry.applications.length > 1 ? "s" : ""}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {entry.applications.map((a, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#e8edf8", borderRadius: 10, border: "1px solid rgba(108,99,255,0.08)" }}>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{a.make} {a.model}</span>
+                          {a.chassis && <span style={{ fontSize: 10, color: "#8890aa", marginLeft: 6 }}>{a.chassis}</span>}
+                        </div>
+                        {(a.from || a.to) && (
+                          <span style={{ fontSize: 10, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.1)", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                            {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
+                          </span>
+                        )}
+                        {a.note && <span style={{ fontSize: 9, color: "#5a6585", fontStyle: "italic" }}>{a.note}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  {entry.transponder && (
+                    <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 6, padding: "3px 9px" }}>
+                        🔐 {entry.transponder}
+                      </span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 6, padding: "3px 9px" }}>
+                        📡 {entry.freq}
+                      </span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 6, padding: "3px 9px" }}>
+                        🔑 Lame {entry.blade} · {entry.buttons} btn
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function UrlProductImport({ onProductCreated, onClose }) {
   const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
   const [form, setForm] = React.useState(empty);
@@ -4422,8 +4627,6 @@ export default function App() {
 
   const [xhorseTab, setXhorseTab] = useState(false);
   const [showUrlImport, setShowUrlImport] = useState(false);
-  const [aftermarketSearch, setAftermarketSearch] = useState("");
-  const [aftermarketMarque, setAftermarketMarque] = useState("");
 
   function showToast(msg, type = "success") {
     setToast({ msg, type });
@@ -5374,110 +5577,21 @@ export default function App() {
   // ================= RENDER AFTERMARKET ======================
   // ============================================================
   const renderAftermarket = () => {
-    const marques = [...new Set(SILCA_DB.map(e => e.marque))].sort();
-    const q = aftermarketSearch.trim().toLowerCase();
-    const filtered = SILCA_DB.filter(e =>
-      (!aftermarketMarque || e.marque === aftermarketMarque) &&
-      (!q || e.ref.toLowerCase().includes(q) || e.marque.toLowerCase().includes(q) || (e.lame && e.lame.toLowerCase().includes(q)))
-    );
-
-    const handleAddToStock = (e) => {
-      const id = "silca-" + e.ref.replace(/[^a-zA-Z0-9]/g, "") + "-" + Date.now();
-      const newProd = {
-        id,
-        nom: `${e.marque} ${e.ref}${e.lame ? " - Lame " + e.lame : ""}`,
-        ref: e.ref,
-        marque: e.marque,
-        lame: e.lame || "",
-        type: e.type || "Clé aftermarket",
-        transpondeur: "",
-        freq: "",
-        modeles: "",
-        prix: 0,
-        categorie: "Aftermarket France",
-        emoji: "🔑",
-        image: e.image || null,
-        lien: "",
-        oeLinks: e.oeLinks || [],
-        notes: "",
-      };
-      setProducts(prev => {
-        if (prev.some(p => p.ref === e.ref)) return prev;
-        return [...prev, newProd];
-      });
-      setStock(prev => {
-        if (prev[id]) return prev;
-        return { ...prev, [id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: false } };
-      });
-      showToast(`✅ ${e.ref} ajouté au stock !`);
-    };
-
-    const isInStock = (ref) => products.some(p => p.ref === ref);
-    return (
-      <div style={S.page}>
-        <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 700, color: "#3d4870", marginBottom: 14, letterSpacing: 1.5, textTransform: "uppercase" }}>
-          Catalogue Aftermarket · {SILCA_DB.length} réf.
-        </div>
-        <div style={{ background: "rgba(2,132,199,0.06)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "#0284c7", fontWeight: 600 }}>
-          📖 Catalogue de référence — ajoutez manuellement au stock
-        </div>
-
-        {/* Recherche */}
-        <div style={{ position: "relative", marginBottom: 10 }}>
-          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
-          <input style={S.searchInput} placeholder="Référence, marque, lame…" value={aftermarketSearch} onChange={e => setAftermarketSearch(e.target.value)} />
-          {aftermarketSearch && <button onClick={() => setAftermarketSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#5a6585", fontSize: 16 }}>✕</button>}
-        </div>
-
-        {/* Filtre marque */}
-        <div style={{ ...S.catRow, marginBottom: 16 }}>
-          <button onClick={() => setAftermarketMarque("")} style={S.catBtn(!aftermarketMarque)}>Toutes</button>
-          {marques.map(m => (
-            <button key={m} onClick={() => setAftermarketMarque(m === aftermarketMarque ? "" : m)} style={S.catBtn(aftermarketMarque === m)}>{m}</button>
-          ))}
-        </div>
-
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "30px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat</div>
-        )}
-
-        {filtered.map((e, i) => {
-          const oeLinks = oeLinksOverrides[e.ref] ?? e.oeLinks ?? [];
-          const inStock = isInStock(e.ref);
-          return (
-            <div key={i} style={{ background: "#e8edf8", borderRadius: 14, marginBottom: 8, padding: "12px 14px", border: `1px solid ${inStock ? "rgba(0,245,147,0.25)" : "rgba(108,99,255,0.12)"}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                {e.image && <img src={e.image} alt={e.ref} style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 8, background: "#c8d0e8", flexShrink: 0 }} onError={ev => { ev.target.style.display="none"; }} />}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ background: "#cc0000", color: "#fff", fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{e.ref}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{e.marque}</span>
-                    {inStock && <span style={{ fontSize: 9, fontWeight: 800, color: "#00b87a", background: "rgba(0,245,147,0.12)", border: "1px solid rgba(0,245,147,0.3)", borderRadius: 6, padding: "1px 7px" }}>✓ EN STOCK</span>}
-                  </div>
-                  {e.lame && <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Lame : <b>{e.lame}</b>{e.type ? ` · ${e.type}` : ""}</div>}
-                  {e.note && <div style={{ fontSize: 11, color: "#6c63ff", marginTop: 2 }}>{e.note}</div>}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                {oeLinks.map((lnk, li) => (
-                  <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: 11, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 8, padding: "4px 10px", textDecoration: "none" }}>
-                    🔗 {lnk.label}
-                  </a>
-                ))}
-                <button
-                  onClick={() => inStock ? setPage("stock") : handleAddToStock(e)}
-                  style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 10, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer",
-                    background: inStock ? "rgba(0,245,147,0.12)" : "linear-gradient(135deg,#6c63ff,#00d4ff)",
-                    color: inStock ? "#00b87a" : "#fff" }}>
-                  {inStock ? "📦 Voir stock" : "+ Ajouter au stock"}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+    return <AftermarketTab
+      stock={stock}
+      products={products}
+      setProducts={setProducts}
+      setStock={setStock}
+      oeLinksOverrides={oeLinksOverrides}
+      onAddToStock={(newProd) => {
+        setProducts(prev => prev.some(p => p.id === newProd.id) ? prev : [...prev, newProd]);
+        setStock(prev => prev[newProd.id] ? prev : { ...prev, [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: false } });
+        showToast(`✅ ${newProd.ref || newProd.nom} ajouté au stock !`);
+      }}
+      onViewStock={() => setPage("stock")}
+      onShowUrlImport={() => setShowUrlImport(true)}
+      S={S}
+    />;
   };
 
   return (
