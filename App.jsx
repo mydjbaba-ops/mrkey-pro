@@ -249,7 +249,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{a.make} <span style={{ fontWeight: 600 }}>{a.model}</span></span>
                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                   {a.ref && <span style={{ fontSize: 9, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "1px 6px", borderRadius: 4 }}>{a.ref}</span>}
-                  {(a.from || a.to) && <span style={{ fontSize: 10, color: "#5a6585" }}>{a.from}{a.to && a.to !== a.from ? `–${a.to}` : ""}</span>}
+                  {(a.yearFrom || a.yearTo) && <span style={{ fontSize: 10, color: "#5a6585" }}>{a.yearFrom}{a.yearTo && a.yearTo !== a.yearFrom ? `–${a.yearTo}` : ""}</span>}
                 </div>
               </div>
             ))}
@@ -263,10 +263,10 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
             (p.buttons || p.boutons) && ["Boutons", (p.buttons || p.boutons) + " boutons"],
             (p.freq || p.frequence) && ["Fréquence", p.freq || p.frequence],
             p.transpondeur && ["Transpondeur", p.transpondeur],
-            p.pile && ["Pile", p.pile],
             p.modeles && !p.applications?.length && ["Modèles", p.modeles],
             p.xhorse && ["Xhorse", p.xhorse],
             p.notes && ["Notes", p.notes],
+            p.pile && ["Pile", p.pile],
           ].filter(Boolean).map(([label, val]) => (
             <div key={label} style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}>
               <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
@@ -3536,7 +3536,7 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   );
 }
 
-function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
+function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides }) {
   const [marque, setMarque] = useState("");
   const [modele, setModele] = useState("");
   const [annee, setAnnee] = useState("");
@@ -3728,18 +3728,6 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
 
   return (
     <div style={{ padding: "16px 16px 110px", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-
-      {/* Bouton ajouter produit */}
-      <button onClick={() => onShowAddProduit && onShowAddProduit()}
-        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 16, padding: "12px 16px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
-        <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>➕</div>
-        <div style={{ flex: 1, textAlign: "left" }}>
-          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit</div>
-          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Colle l'URL — la fiche se remplit automatiquement</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
         <button onClick={function() { setActiveTab("xhorse"); }}
@@ -4359,11 +4347,6 @@ function UrlProductImport({ onProductCreated, onClose }) {
           <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
         </div>
 
-        <div style={row}>
-          <label style={lbl}>Pile</label>
-          <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
-        </div>
-
         {/* Champ image */}
         <div style={{ ...row, background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px" }}>
           <label style={{ ...lbl, color: "#6c63ff" }}>📸 URL de la photo du produit</label>
@@ -4822,6 +4805,19 @@ export default function App() {
       : (stockFilter === "all" ? products : stockFilter === "low" ? lowStockProducts : products.filter(p => { const s = stock[p.id]; return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT); }));
     return (
     <div style={S.page}>
+      {/* Bouton ajouter produit */}
+      <button
+        onClick={() => setShowUrlImport(true)}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 16, padding: "12px 16px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
+        <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>➕</div>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit</div>
+          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Crée une fiche manuellement · colle l'URL fournisseur</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7, marginBottom: 14 }}>
         <div style={S.statBox}><div style={S.statNum}>{products.length}</div><div style={S.statLabel}>Total</div></div>
         <div style={{ ...S.statBox, border: "1px solid #ff6b6b33" }}><div style={{ ...S.statNum, color: "#ff6b6b" }}>{lowStockProducts.length}</div><div style={S.statLabel}>Stock bas</div></div>
@@ -5531,7 +5527,6 @@ export default function App() {
             initialTab={xhorseTab ? "xhorse" : undefined}
             oeLinksOverrides={oeLinksOverrides}
             setOeLinksOverrides={setOeLinksOverrides}
-            onShowAddProduit={() => setShowUrlImport(true)}
             onAddToStock={function(vp) {
               var newProd = {
                 ...vp,
@@ -5554,19 +5549,11 @@ export default function App() {
                 lien: vp.lien || "",
                 oeLinks: vp.oeLinks || [],
                 notes: vp.notes || "",
-                applications: vp.applications || null,
-                buttons: vp.buttons || vp.boutons || null,
-                pile: vp.pile || "",
               };
-              // Ajoute dans products seulement si pas déjà présent
               setProducts(function(prev) {
-                if (prev.some(function(p) { return p.id === newProd.id; })) {
-                  // Déjà présent — on met juste à jour
-                  return prev.map(p => p.id === newProd.id ? { ...p, ...newProd } : p);
-                }
+                if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
                 return [...prev, newProd];
               });
-              // Initialise le stock
               setStock(function(prev) {
                 if (prev[newProd.id]) return prev;
                 return { ...prev, [newProd.id]: { qty: 0, seuil: 3, historique: [], init: false } };
