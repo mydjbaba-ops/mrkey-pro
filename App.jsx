@@ -3031,7 +3031,7 @@ function SilcaPhoto({ entry }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // SilcaTab — onglet principal : 1 carte = 1 référence Silca = 1 seule image
 // ─────────────────────────────────────────────────────────────────────────────
-function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLinksOverrides, setOeLinksOverrides, userProducts, setSelectedProduct, setPage }) {
+function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLinksOverrides, setOeLinksOverrides }) {
   const [editingRef, setEditingRef] = useState(null);
   const overrides = oeLinksOverrides || {};
   const [filterMarque, setFilterMarque] = useState("");
@@ -3135,36 +3135,6 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
           </div>
         </div>
       </div>
-
-      {/* ─ Produits ajoutés manuellement ─ */}
-      {userProducts && userProducts.length > 0 && (
-        <div style={{ marginBottom: 14 }}>
-          {userProducts.map(function(p) {
-            return (
-              <div key={p.id}
-                style={{ background: "#e8edf8", borderRadius: 14, padding: "11px 13px", marginBottom: 7,
-                  border: "1px solid rgba(204,0,0,0.2)", cursor: "pointer", display: "flex", alignItems: "center", gap: 11 }}
-                onClick={function() { setSelectedProduct && setSelectedProduct(p); setPage && setPage("detail"); }}>
-                <img src={p.image} alt={p.nom}
-                  onError={function(e) { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Crect width='60' height='60' rx='8' fill='%23e8edf8'/%3E%3Ctext x='30' y='38' text-anchor='middle' font-size='24'%3E%F0%9F%94%91%3C/text%3E%3C/svg%3E"; }}
-                  style={{ width: 56, height: 56, objectFit: "contain", borderRadius: 10, background: "#c8d0e8", flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: "#cc0000", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 2 }}>{p.marque} · {p.type || "Clé"}</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "#1a1d2e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
-                  <div style={{ fontSize: 10, color: "#5a6585", marginTop: 2 }}>
-                    {p.ref && <span style={{ marginRight: 6, fontWeight: 600 }}>{p.ref}</span>}
-                    {p.lame && <span style={{ marginRight: 6 }}>Lame {p.lame}</span>}
-                    {p.freq && <span>{p.freq}</span>}
-                  </div>
-                  {p.modeles && <div style={{ fontSize: 10, color: "#5a6585", marginTop: 1 }}>{p.modeles}</div>}
-                </div>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#cc0000" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              </div>
-            );
-          })}
-          <div style={{ height: 1, background: "rgba(204,0,0,0.2)", margin: "10px 0 14px" }} />
-        </div>
-      )}
 
       {/* ─ Filtre type ─ */}
       <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
@@ -4068,7 +4038,32 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
       )}
 
       {activeTab === "silca" && (
-        <SilcaTab onAddToStock={onAddToStock} stock={stock} bgCard={bgCard} accent={accent} textDim={textDim} textMid={textMid} oeLinksOverrides={oeLinksOverrides} setOeLinksOverrides={setOeLinksOverrides} userProducts={products} setSelectedProduct={setSelectedProduct} setPage={setPage} />
+        <div>
+          {/* Produits ajoutés manuellement */}
+          {products.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#6c63ff", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>🔑 Mes clés ({products.length})</div>
+              {products.map(function(p) {
+                return (
+                  <div key={p.id} style={{ background: bgCard, borderRadius: 14, padding: "11px 13px", marginBottom: 7, border: "1px solid rgba(108,99,255,0.15)", display: "flex", alignItems: "center", gap: 11, cursor: "pointer" }}
+                    onClick={function() { setSelectedProduct(p); setPage("detail"); }}>
+                    <img src={p.image} alt={p.nom}
+                      onError={function(e) { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Crect width='60' height='60' rx='8' fill='%23e8edf8'/%3E%3Ctext x='30' y='38' text-anchor='middle' font-size='24'%3E%F0%9F%94%91%3C/text%3E%3C/svg%3E"; }}
+                      style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 10, background: "#c8d0e8", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: "#6c63ff", textTransform: "uppercase", letterSpacing: 0.5 }}>{p.marque}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
+                      <div style={{ fontSize: 10, color: "#5a6585" }}>{p.ref}</div>
+                    </div>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                );
+              })}
+              <div style={{ height: 1, background: "rgba(204,0,0,0.15)", margin: "14px 0 12px" }} />
+            </div>
+          )}
+          <SilcaTab onAddToStock={onAddToStock} stock={stock} bgCard={bgCard} accent={accent} textDim={textDim} textMid={textMid} oeLinksOverrides={oeLinksOverrides} setOeLinksOverrides={setOeLinksOverrides} />
+        </div>
       )}
 
     </div>
