@@ -4443,7 +4443,7 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 }
 
 function UrlProductImport({ onProductCreated, onClose }) {
-  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
+  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", pcf: "", lame: "", pile: "", boutons: "", mainLibre: "", annees: "", lien: "", image: "" };
   const [form, setForm] = React.useState(empty);
   const [loading, setLoading] = React.useState(false);
   const [analysed, setAnalysed] = React.useState(false);
@@ -4454,168 +4454,33 @@ function UrlProductImport({ onProductCreated, onClose }) {
   const handleAnalyse = async () => {
     const url = form.lien.trim();
     if (!url) return;
-    setLoading(true); setErrorMsg(""); setAnalysed(false);
+    setLoading(true);
+    setErrorMsg("");
+    setAnalysed(false);
     try {
-      // Récupère le contenu de la page via proxy CORS
-      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const r = await fetch(proxy);
-      if (!r.ok) throw new Error("proxy");
-      const d = await r.json();
-      const raw = d.contents || "";
-
-      // Extrait les meta/json-ld avant de supprimer les balises
-      const getMeta = (name) => {
-        const m = raw.match(new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, "i"))
-                || raw.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, "i"));
-        return m ? m[1].trim() : "";
-      };
-      const getJsonLd = (key) => {
-        const m = raw.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
-        if (!m) return "";
-        try {
-          const obj = JSON.parse(m[1]);
-          const val = obj[key] || (obj["@graph"] && obj["@graph"][0]?.[key]);
-          return val ? String(val).trim() : "";
-        } catch { return ""; }
-      };
-
-      // Texte brut nettoyé pour les regex
-      const txt = raw
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s+/g, " ");
-
-      // ── Helpers regex ──────────────────────────────────────────
-      const find = (patterns) => {
-        for (const p of patterns) {
-          const m = txt.match(p);
-          if (m && m[1]) return m[1].trim().replace(/[<>]/g, "");
-        }
-        return "";
-      };
-      const findAll = (patterns) => {
-        const results = [];
-        for (const p of patterns) {
-          const m = txt.match(p);
-          if (m && m[1]) { results.push(m[1].trim()); }
-        }
-        return results;
-      };
-
-      // ── Nom ───────────────────────────────────────────────────
-      const nom = getMeta("og:title") || getMeta("twitter:title") || getJsonLd("name")
-        || find([/<title[^>]*>([^<]{5,})<\/title>/i, /h1[^>]*>([^<]{5,})<\/h1>/i]) || "";
-
-      // ── Référence ────────────────────────────────────────────
-      const ref = find([
-        /(?:référence|ref\.?|sku|code produit|article)[^\w]*:?\s*([\w\-\.]{3,20})/i,
-        /\bSKU[:\s]+([\w\-]{3,20})/i,
-        /(?:^|[\s,])((?:VA|HU|SIP|GT|HYN|MIT|TOY|NSN|FO|HO|MAZ|VO|SZ|MAZ|KI|YM|IS)\d{1,4}[A-Z\-]?[\w\-]*)/i,
-      ]);
-
-      // ── Prix ─────────────────────────────────────────────────
-      const prix = getMeta("product:price:amount")
-        || find([/(\d{1,3}[,\.]\d{2})\s*€/, /€\s*(\d{1,3}[,\.]\d{2})/, /prix[^:]*:\s*(\d{1,3}[,\.]\d{1,2})/i])
-            .replace(",", ".") || "";
-
-      // ── Marque véhicule ──────────────────────────────────────
-      const MARQUES_VEH = ["Renault","Peugeot","Citroën","Citroen","Volkswagen","VW","Audi","BMW","Mercedes",
-        "Ford","Opel","Toyota","Nissan","Fiat","Seat","Skoda","Volvo","Hyundai","Kia","Mazda",
-        "Honda","Mitsubishi","Suzuki","Dacia","Alfa Romeo","Lancia","Smart","Mini","Porsche","Land Rover","Jaguar"];
-      const marqueFound = MARQUES_VEH.find(m => new RegExp(`\\b${m}\\b`, "i").test(txt)) || "";
-
-      // ── Modèles ──────────────────────────────────────────────
-      const MODELES_PATTERNS = [
-        /compatible[s]?\s+(?:avec\s+)?:?\s*([A-Z][^\n\.]{5,80})/i,
-        /v[eé]hicule[s]?\s+compatible[s]?\s*:?\s*([^\n\.]{5,80})/i,
-        /pour\s+([A-Z][a-z]+(?:\s+[A-Z]?[a-z\d]+){1,5})/i,
-        /modèles?\s*:?\s*([^\n\.]{5,60})/i,
-      ];
-      const modeles = find(MODELES_PATTERNS)
-        .replace(/compatible[s]?\s+(?:avec)?:?\s*/i, "")
-        .replace(/véhicules?\s*:?\s*/i, "")
-        .slice(0, 120) || "";
-
-      // ── Années ───────────────────────────────────────────────
-      const annees = find([
-        /(\d{4})\s*[-–à]\s*(\d{4})/,
-        /(?:de|depuis|from|ab)\s+(\d{4})/i,
-        /(\d{4})\s*(?:et\s+suivants?|onwards?)/i,
-      ]) || (() => {
-        // cherche deux années proches dans le texte
-        const ys = [...txt.matchAll(/\b(19\d{2}|20\d{2})\b/g)].map(m => parseInt(m[1])).filter(y => y >= 1990 && y <= 2030);
-        if (ys.length >= 2) { const mn = Math.min(...ys), mx = Math.max(...ys); return mn === mx ? `${mn}` : `${mn} – ${mx}`; }
-        return ys[0] ? `${ys[0]}` : "";
-      })();
-
-      // ── Fréquence ────────────────────────────────────────────
-      const freq = find([
-        /(43[34]\s*(?:\.\d+)?\s*MHz)/i,
-        /(868\s*MHz)/i,
-        /(315\s*MHz)/i,
-        /fr[eé]quence[^:]*:\s*([\d\.]+\s*MHz)/i,
-        /([\d\.]+\s*MHz)/i,
-      ]);
-
-      // ── Transpondeur ─────────────────────────────────────────
-      const transpondeur = find([
-        /(?:transpondeur|transponder|chip)[^:]*:?\s*((?:ID|PCF|HITAG|Megamos|Texas|NXP)[\w\s\-]{1,20})/i,
-        /\b(ID\s*4[0-9]|ID\s*6[0-9]|ID\s*8[0-9]|PCF79\d{2}|HITAG\s*(?:2|AES|Pro)?|Megamos[\w\s]*|Texas[\w\s]*)\b/i,
-      ]);
-
-      // ── Lame ─────────────────────────────────────────────────
-      const LAMES = ["VA2","VA6","HU66","HU101","SIP22","GT15R","HY20","HON66","TOY43","MAZ24",
-        "MIT11","NSN14","SZ11","VO102","HU56","HU58","HU64","YM28","IS300","FO21","FO38","FO40","HU83","HU92","HU100","HU162T"];
-      const lame = LAMES.find(l => new RegExp(`\\b${l}\\b`, "i").test(txt))
-        || find([/lame[^:]*:?\s*([\w]{2,8})/i, /blade[^:]*:?\s*([\w]{2,8})/i]);
-
-      // ── Pile ─────────────────────────────────────────────────
-      const pile = find([
-        /\b(CR\s*2032|CR\s*1632|CR\s*2016|CR\s*1616|CR\s*2025|CR\s*2430)\b/i,
-        /pile[^:]*:?\s*([\w\d]{4,8})/i,
-        /batterie[^:]*:?\s*([\w\d]{4,8})/i,
-        /battery[^:]*:?\s*([\w\d]{4,8})/i,
-      ]).replace(/\s/g, "").toUpperCase() || "";
-
-      // ── Boutons ──────────────────────────────────────────────
-      const boutons = find([
-        /(\d)\s*(?:boutons?|buttons?|touches?)/i,
-        /(?:boutons?|buttons?|touches?)\s*:?\s*(\d)/i,
-        /(\d)\s*(?:clés?|key[s]?)/i,
-      ]);
-
-      // ── Main libre ───────────────────────────────────────────
-      const mainLibre = /\b(?:main.?libre|keyless.?(?:entry|go|access)|hands?.?free|proximity|prox|proximité)\b/i.test(txt)
-        ? "oui" : "non";
-
-      // ── Image ────────────────────────────────────────────────
-      const image = getMeta("og:image") || getMeta("twitter:image")
-        || find([
-          /["'](https?:\/\/[^"']+\.(?:jpg|jpeg|png|webp)(?:\?[^"']*)?)['"]/i,
-          /<img[^>]+src=["'](https?:\/\/[^"']+)['"]/i,
-        ]);
-
-      // ── Peuple le formulaire ─────────────────────────────────
+      const res = await fetch("/api/analyse-produit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
       setForm(prev => ({
         ...prev,
-        nom:          nom          || prev.nom,
-        ref:          ref          || prev.ref,
-        marque:       marqueFound  || prev.marque,
-        modeles:      modeles      || prev.modeles,
-        annees:       typeof annees === "string" ? annees : (annees[0] && annees[1] ? `${annees[0]} – ${annees[1]}` : String(annees || "")) || prev.annees,
-        prix:         prix         || prev.prix,
-        freq:         freq         || prev.freq,
-        transpondeur: transpondeur || prev.transpondeur,
-        lame:         lame         || prev.lame,
-        pile:         pile         || prev.pile,
-        boutons:      boutons      || prev.boutons,
-        mainLibre:    mainLibre    || prev.mainLibre,
-        image:        image        || prev.image || "",
+        nom: data.nom || prev.nom,
+        ref: data.ref || prev.ref,
+        marque: data.marque || prev.marque,
+        modeles: data.modeles || prev.modeles,
+        prix: data.prix || prev.prix,
+        type: data.type || prev.type,
+        freq: data.freq || prev.freq,
+        transpondeur: data.transpondeur || prev.transpondeur,
+        lame: data.lame || prev.lame,
+        image: data.image || prev.image || "",
       }));
       setAnalysed(true);
     } catch (e) {
-      setErrorMsg("Impossible de charger la page — colle l'URL et remplis manuellement");
+      setErrorMsg("Erreur réseau — vérifie ta connexion");
     }
     setLoading(false);
   };
@@ -4628,12 +4493,17 @@ function UrlProductImport({ onProductCreated, onClose }) {
       ref: form.ref.trim() || ("REF-" + Date.now().toString().slice(-6)),
       marque: form.marque.trim() || "Autre",
       modeles: form.modeles.trim(),
+      annees: form.annees?.trim() || "",
+      boutons: form.boutons?.toString().trim() || "",
+      mainLibre: form.mainLibre || "",
       prix: parseFloat(form.prix) || 0,
       categorie: "Aftermarket France",
       type: form.type || "Clé",
       freq: form.freq.trim(),
       transpondeur: form.transpondeur.trim(),
+      pcf: form.pcf?.trim() || "",
       lame: form.lame.trim(),
+      pile: form.pile?.trim() || "",
       emoji: "🔑",
       image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
@@ -4696,7 +4566,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
 
         {/* Champs produit */}
         <div style={row}>
-          <label style={lbl}>Nom du produit *</label>
+          <label style={lbl}>Nom du produit</label>
           <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 4 boutons 433MHz" style={inp} />
         </div>
 
@@ -4721,27 +4591,45 @@ function UrlProductImport({ onProductCreated, onClose }) {
           </div>
           <div style={row}>
             <label style={lbl}>Fréquence</label>
-            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433MHz" style={inp} />
+            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433 MHz" style={inp} />
           </div>
           <div style={row}>
             <label style={lbl}>Transpondeur</label>
             <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>PCF</label>
+            <input value={form.pcf || ""} onChange={e => set("pcf", e.target.value)} placeholder="ex: PCF7936" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Lame</label>
+            <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2, HU66" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Type de pile</label>
+            <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Nb de boutons</label>
+            <input type="number" min="1" max="10" value={form.boutons || ""} onChange={e => set("boutons", e.target.value)} placeholder="ex: 3" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Années</label>
+            <input value={form.annees || ""} onChange={e => set("annees", e.target.value)} placeholder="ex: 2012 – 2020" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Main libre</label>
+            <select value={form.mainLibre || ""} onChange={e => set("mainLibre", e.target.value)} style={{ ...inp, appearance: "none", color: form.mainLibre ? "#1a1d2e" : "#8890aa" }}>
+              <option value="">—</option>
+              <option value="oui">Oui</option>
+              <option value="non">Non</option>
+            </select>
           </div>
         </div>
 
         <div style={row}>
           <label style={lbl}>Modèles compatibles</label>
           <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo" style={inp} />
-        </div>
-
-        <div style={row}>
-          <label style={lbl}>Lame</label>
-          <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
-        </div>
-
-        <div style={row}>
-          <label style={lbl}>Pile</label>
-          <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
         </div>
 
         {/* Champ image */}
