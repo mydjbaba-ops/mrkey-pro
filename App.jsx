@@ -4831,16 +4831,17 @@ export default function App() {
   );
 
   const renderStock = () => {
+    const inStock = products.filter(p => { const s = stock[p.id]; return s && !s.init; });
     const stockFiltered2 = stockSearch.trim()
-      ? (stockFilter === "all" ? products : stockFilter === "low" ? lowStockProducts : products.filter(p => { const s = stock[p.id]; return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT); }))
+      ? (stockFilter === "all" ? inStock : stockFilter === "low" ? lowStockProducts : inStock.filter(p => { const s = stock[p.id]; return s?.qty > (s?.seuil || SEUIL_DEFAULT); }))
           .filter(p => p.nom.toLowerCase().includes(stockSearch.toLowerCase()) || p.ref.toLowerCase().includes(stockSearch.toLowerCase()) || (p.marque && p.marque.toLowerCase().includes(stockSearch.toLowerCase())))
-      : (stockFilter === "all" ? products : stockFilter === "low" ? lowStockProducts : products.filter(p => { const s = stock[p.id]; return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT); }));
+      : (stockFilter === "all" ? inStock : stockFilter === "low" ? lowStockProducts : inStock.filter(p => { const s = stock[p.id]; return s?.qty > (s?.seuil || SEUIL_DEFAULT); }));
     return (
     <div style={S.page}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7, marginBottom: 14 }}>
-        <div style={S.statBox}><div style={S.statNum}>{products.length}</div><div style={S.statLabel}>Total</div></div>
+        <div style={S.statBox}><div style={S.statNum}>{inStock.length}</div><div style={S.statLabel}>Total</div></div>
         <div style={{ ...S.statBox, border: "1px solid #ff6b6b33" }}><div style={{ ...S.statNum, color: "#ff6b6b" }}>{lowStockProducts.length}</div><div style={S.statLabel}>Stock bas</div></div>
-        <div style={S.statBox}><div style={{ ...S.statNum, color: "#4ade80" }}>{products.length - lowStockProducts.length}</div><div style={S.statLabel}>OK</div></div>
+        <div style={S.statBox}><div style={{ ...S.statNum, color: "#4ade80" }}>{inStock.length - lowStockProducts.length}</div><div style={S.statLabel}>OK</div></div>
       </div>
       {/* Barre de recherche stock */}
       <div style={{ position: "relative", marginBottom: 10 }}>
