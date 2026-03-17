@@ -3557,7 +3557,7 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
   const [annee, setAnnee] = useState("");
   const [result, setResult] = useState(null);
   const [freeSearch, setFreeSearch] = useState(initialSearch || "");
-  const [activeTab, setActiveTab] = useState("xhorse");
+  const [activeTab, setActiveTab] = useState(initialTab || "xhorse");
   const [xhorseMarque, setXhorseMarque] = useState("");
   const [xhorseModele, setXhorseModele] = useState("");
   const [keyPhoto, setKeyPhoto] = useState(null);
@@ -4038,7 +4038,32 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
       )}
 
       {activeTab === "silca" && (
-        <SilcaTab onAddToStock={onAddToStock} stock={stock} bgCard={bgCard} accent={accent} textDim={textDim} textMid={textMid} oeLinksOverrides={oeLinksOverrides} setOeLinksOverrides={setOeLinksOverrides} />
+        <div>
+          {/* Produits ajoutés manuellement */}
+          {products.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#6c63ff", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>🔑 Mes clés ({products.length})</div>
+              {products.map(function(p) {
+                return (
+                  <div key={p.id} style={{ background: bgCard, borderRadius: 14, padding: "11px 13px", marginBottom: 7, border: "1px solid rgba(108,99,255,0.15)", display: "flex", alignItems: "center", gap: 11, cursor: "pointer" }}
+                    onClick={function() { setSelectedProduct(p); setPage("detail"); }}>
+                    <img src={p.image} alt={p.nom}
+                      onError={function(e) { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Crect width='60' height='60' rx='8' fill='%23e8edf8'/%3E%3Ctext x='30' y='38' text-anchor='middle' font-size='24'%3E%F0%9F%94%91%3C/text%3E%3C/svg%3E"; }}
+                      style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 10, background: "#c8d0e8", flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: "#6c63ff", textTransform: "uppercase", letterSpacing: 0.5 }}>{p.marque}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.nom}</div>
+                      <div style={{ fontSize: 10, color: "#5a6585" }}>{p.ref}</div>
+                    </div>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                );
+              })}
+              <div style={{ height: 1, background: "rgba(204,0,0,0.15)", margin: "14px 0 12px" }} />
+            </div>
+          )}
+          <SilcaTab onAddToStock={onAddToStock} stock={stock} bgCard={bgCard} accent={accent} textDim={textDim} textMid={textMid} oeLinksOverrides={oeLinksOverrides} setOeLinksOverrides={setOeLinksOverrides} />
+        </div>
       )}
 
     </div>
@@ -5378,7 +5403,7 @@ export default function App() {
             setPage={setPage}
             setIntervFormProduct={function(p) { setIntervFormProduct(p); setShowIntervForm(true); }}
             initialSearch={search}
-            initialTab={xhorseTab ? "xhorse" : undefined}
+            initialTab={xhorseTab === "silca" ? "silca" : xhorseTab ? "xhorse" : undefined}
             oeLinksOverrides={oeLinksOverrides}
             setOeLinksOverrides={setOeLinksOverrides}
             onShowAddProduit={() => setShowUrlImport(true)}
@@ -5556,8 +5581,9 @@ export default function App() {
             onProductCreated={(newProd) => {
               setProducts(prev => [newProd, ...prev]);
               setShowUrlImport(false);
-              
+              setXhorseTab("silca");
               setPage("recherche");
+              setTimeout(() => setXhorseTab(false), 100);
               showToast("✅ Fiche créée dans le catalogue !");
             }}
             onClose={() => setShowUrlImport(false)}
