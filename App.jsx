@@ -115,6 +115,16 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   const isLow = !isInit && qty <= seuil;
   const ln = lienLabel(p);
 
+  // Initialise l'entrée stock à la première ouverture de la fiche (si absente)
+  useEffect(() => {
+    if (!stock[p.id]) {
+      setStock(prev => ({
+        ...prev,
+        [p.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true },
+      }));
+    }
+  }, [p.id]); // eslint-disable-line
+
   const showFlash = (type) => { setFlash(type); setTimeout(() => setFlash(null), 900); };
 
   const handleSetQty = () => {
@@ -5572,11 +5582,7 @@ export default function App() {
                 if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
                 return [...prev, newProd];
               });
-              setStock(function(prev) {
-                if (prev[newProd.id]) return prev;
-                return { ...prev, [newProd.id]: { qty: 0, seuil: 3, historique: [], init: false } };
-              });
-              showToast("✅ " + newProd.nom + " ajouté au stock !");
+              showToast("✅ " + newProd.nom + " ajouté au catalogue !");
             }}
           />
         )}
@@ -5722,18 +5728,11 @@ export default function App() {
         {showUrlImport && (
           <UrlProductImport
             onProductCreated={(newProd) => {
-              setProducts(prev => {
-                const updated = [newProd, ...prev];
-                return updated;
-              });
-              setStock(prev => ({
-                ...prev,
-                [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true },
-              }));
+              setProducts(prev => [newProd, ...prev]);
               setShowUrlImport(false);
               setSelectedProduct(newProd);
               setPage("detail");
-              showToast("✅ Fiche produit créée depuis l'URL !");
+              showToast("✅ Fiche créée dans le catalogue !");
             }}
             onClose={() => setShowUrlImport(false)}
           />
