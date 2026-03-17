@@ -115,22 +115,15 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   const isLow = !isInit && qty <= seuil;
   const ln = lienLabel(p);
 
-  // Initialise l'entrée stock à la première ouverture de la fiche (si absente)
-  useEffect(() => {
-    if (!stock[p.id]) {
-      setStock(prev => ({
-        ...prev,
-        [p.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true },
-      }));
-    }
-  }, [p.id]); // eslint-disable-line
-
   const showFlash = (type) => { setFlash(type); setTimeout(() => setFlash(null), 900); };
 
   const handleSetQty = () => {
     const val = parseInt(qtyRef.current?.value);
     if (!isNaN(val) && val >= 0) {
-      setStock(prev => { const cur = prev[p.id]; return { ...prev, [p.id]: { ...cur, qty: val, init: false, historique: [{ action: `=${val} (manuel)`, date: new Date().toLocaleDateString("fr-FR"), qty: val }, ...cur.historique.slice(0, 9)] } }; });
+      setStock(prev => {
+        const cur = prev[p.id] || { qty: 0, seuil: SEUIL_DEFAULT, historique: [] };
+        return { ...prev, [p.id]: { ...cur, qty: val, init: false, historique: [{ action: `=${val} (manuel)`, date: new Date().toLocaleDateString("fr-FR"), qty: val }, ...cur.historique.slice(0, 9)] } };
+      });
       if (qtyRef.current) qtyRef.current.value = "";
       showFlash("qty");
     }
@@ -139,7 +132,10 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   const handleSetSeuil = () => {
     const val = parseInt(seuilRef.current?.value);
     if (!isNaN(val) && val >= 0) {
-      setStock(prev => ({ ...prev, [p.id]: { ...prev[p.id], seuil: val, init: false } }));
+      setStock(prev => {
+        const cur = prev[p.id] || { qty: 0, seuil: SEUIL_DEFAULT, historique: [] };
+        return { ...prev, [p.id]: { ...cur, seuil: val, init: false } };
+      });
       if (seuilRef.current) seuilRef.current.value = "";
       showFlash("seuil");
     }
@@ -147,8 +143,8 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
 
   const adjustStock = (delta) => {
     setStock(prev => {
-      const cur = prev[p.id];
-      const newQty = Math.max(0, cur.qty + delta);
+      const cur = prev[p.id] || { qty: 0, seuil: SEUIL_DEFAULT, historique: [] };
+      const newQty = Math.max(0, (cur.qty ?? 0) + delta);
       return { ...prev, [p.id]: { ...cur, qty: newQty, init: false, historique: [{ action: delta > 0 ? `+${delta}` : `${delta}`, date: new Date().toLocaleDateString("fr-FR"), qty: newQty }, ...cur.historique.slice(0, 9)] } };
     });
   };
@@ -5581,6 +5577,10 @@ export default function App() {
               setProducts(function(prev) {
                 if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
                 return [...prev, newProd];
+              });
+              setStock(function(prev) {
+                if (prev[newProd.id]) return prev;
+                return { ...prev, [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: true } };
               });
               showToast("✅ " + newProd.nom + " ajouté au catalogue !");
             }}
