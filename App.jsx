@@ -4474,73 +4474,94 @@ function UrlProductImport({ onProductCreated, onClose }) {
     setAnalysed(false);
     setMissingFields([]);
     try {
-      const PROMPT = `Tu es un expert en clés automobile aftermarket. Analyse la page produit à cette URL : ${url}
+      // 1. Récupérer le contenu HTML de la page via proxy CORS
+      let pageContent = "";
+      try {
+        const corsProxy = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
+        const proxyRes = await fetch(corsProxy, { signal: AbortSignal.timeout(12000) });
+        const proxyData = await proxyRes.json();
+        // Nettoyer le HTML : retirer scripts/styles, garder le texte utile
+        const raw = proxyData.contents || "";
+        pageContent = raw
+          .replace(/<script[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s{3,}/g, "\n")
+          .slice(0, 6000); // limiter pour rester dans le contexte
+      } catch {
+        throw new Error("Impossible d'accéder à la page — vérifie l'URL ou essaie depuis un PC");
+      }
 
-Extrais PRÉCISÉMENT ces informations depuis la page source. Réponds UNIQUEMENT en JSON valide, sans backticks ni texte autour :
+      if (!pageContent.trim()) throw new Error("Page vide ou inaccessible");
+
+      const PROMPT = `Tu es un expert en clés automobile aftermarket. Voici le contenu texte d'une page produit (URL: ${url}).
+
+Extrait PRÉCISÉMENT ces informations. Réponds UNIQUEMENT en JSON valide, sans backticks ni texte autour :
 {
   "nom": "nom complet du produit",
   "ref": "référence / SKU fabricant",
   "marque": "marque(s) de véhicule(s) (ex: Renault, Peugeot)",
   "modeles": "liste complète des modèles compatibles (ex: Clio 3, Mégane 2, Kangoo)",
   "annees": "plage d'années (ex: 2005-2015)",
-  "freq": "fréquence radio en MHz (ex: 433.92 MHz)",
+  "freq": "fréquence radio (ex: 433.92 MHz)",
   "lame": "référence de la lame mécanique (ex: VA2, HU83, SIP22)",
   "transpondeur": "type de transpondeur/puce (ex: ID46, HITAG2, PCF7936)",
-  "boutons": "nombre de boutons (ex: 3, 4)",
-  "pile": "type de pile (ex: CR2032, CR1620, 2×CR2025)",
-  "mainLibre": "oui ou non selon si le produit est compatible main libre / keyless",
+  "boutons": "nombre de boutons (ex: 3)",
+  "pile": "type de pile (ex: CR2032, CR1620)",
+  "mainLibre": "oui ou non selon si compatible main libre / keyless",
   "type": "Clé ou Télécommande ou Coque ou Transpondeur",
   "prix": "prix en chiffres uniquement si visible (ex: 12.50)",
-  "image": "URL directe de la photo principale du produit (.jpg/.png/.webp)"
+  "image": "URL directe de la photo principale si présente dans le contenu"
 }
+Si une info n'est pas trouvée, mets "". Ne devine pas.
 
-Si une information n'est pas trouvée sur la page, mets "" (chaîne vide). Ne devine pas.`;
+CONTENU DE LA PAGE :
+${pageContent}`;
 
+      // 2. Appel à l'API Anthropic
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
           messages: [{ role: "user", content: PROMPT }],
         }),
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || "Erreur API");
+      if (!response.ok) throw new Error(data.error?.message || `Erreur API (${response.status})`);
 
-      // Extraire le texte de la réponse (dernier bloc text)
       const textBlock = [...(data.content || [])].reverse().find(b => b.type === "text");
-      if (!textBlock) throw new Error("Réponse vide");
+      if (!textBlock) throw new Error("Réponse vide de l'IA");
 
       let parsed;
       try {
         const clean = textBlock.text.replace(/```json|```/g, "").trim();
-        parsed = JSON.parse(clean);
+        const jsonMatch = clean.match(/\{[\s\S]*\}/);
+        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : clean);
       } catch {
-        throw new Error("Format de réponse invalide");
+        throw new Error("Format de réponse invalide — réessaie");
       }
 
       setForm(prev => ({
         ...prev,
-        nom:         parsed.nom         || prev.nom,
-        ref:         parsed.ref         || prev.ref,
-        marque:      parsed.marque      || prev.marque,
-        modeles:     parsed.modeles     || prev.modeles,
-        annees:      parsed.annees      || prev.annees,
-        prix:        parsed.prix        || prev.prix,
-        type:        parsed.type        || prev.type,
-        freq:        parsed.freq        || prev.freq,
-        transpondeur:parsed.transpondeur|| prev.transpondeur,
-        lame:        parsed.lame        || prev.lame,
-        pile:        parsed.pile        || prev.pile,
-        boutons:     parsed.boutons     || prev.boutons,
-        mainLibre:   parsed.mainLibre   || prev.mainLibre,
-        image:       parsed.image       || prev.image || "",
+        nom:          parsed.nom          || prev.nom,
+        ref:          parsed.ref          || prev.ref,
+        marque:       parsed.marque       || prev.marque,
+        modeles:      parsed.modeles      || prev.modeles,
+        annees:       parsed.annees       || prev.annees,
+        prix:         parsed.prix         || prev.prix,
+        type:         parsed.type         || prev.type,
+        freq:         parsed.freq         || prev.freq,
+        transpondeur: parsed.transpondeur || prev.transpondeur,
+        lame:         parsed.lame         || prev.lame,
+        pile:         parsed.pile         || prev.pile,
+        boutons:      parsed.boutons      || prev.boutons,
+        mainLibre:    parsed.mainLibre    || prev.mainLibre,
+        image:        parsed.image        || prev.image || "",
       }));
 
-      // Détecter les champs obligatoires non remplis
       const missing = REQUIRED.filter(f => !parsed[f.key] || parsed[f.key] === "").map(f => f.label);
       setMissingFields(missing);
       setAnalysed(true);
