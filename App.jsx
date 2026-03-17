@@ -4445,134 +4445,53 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 function UrlProductImport({ onProductCreated, onClose }) {
   const empty = {
     nom: "", ref: "", marque: "", modeles: "", annees: "", prix: "",
-    type: "Clé", freq: "", transpondeur: "", lame: "",
-    pile: "", boutons: "", mainLibre: "", lien: "", image: "",
+    freq: "", transpondeur: "", lame: "", pile: "", boutons: "", mainLibre: "",
+    type: "Clé", lien: "", image: "",
   };
   const [form, setForm] = React.useState(empty);
   const [loading, setLoading] = React.useState(false);
   const [analysed, setAnalysed] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
-  const [missingFields, setMissingFields] = React.useState([]);
+  const [errors, setErrors] = React.useState({});
 
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(e => ({ ...e, [k]: false })); };
 
-  const REQUIRED = [
-    { key: "modeles",   label: "Modèles compatibles" },
-    { key: "annees",    label: "Années" },
-    { key: "pile",      label: "Type de pile" },
-    { key: "boutons",   label: "Nombre de boutons" },
-    { key: "mainLibre", label: "Main libre" },
-    { key: "freq",      label: "Fréquence" },
-    { key: "lame",      label: "Type de lame" },
-  ];
+  const REQUIRED = ["nom", "modeles", "annees", "pile", "boutons", "mainLibre", "freq", "lame"];
 
   const handleAnalyse = async () => {
     const url = form.lien.trim();
     if (!url) return;
-    setLoading(true);
-    setErrorMsg("");
-    setAnalysed(false);
-    setMissingFields([]);
+    setLoading(true); setErrorMsg(""); setAnalysed(false);
     try {
-      // 1. Récupérer le contenu HTML de la page via proxy CORS
-      let pageContent = "";
-      try {
-        const corsProxy = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
-        const proxyRes = await fetch(corsProxy, { signal: AbortSignal.timeout(12000) });
-        const proxyData = await proxyRes.json();
-        // Nettoyer le HTML : retirer scripts/styles, garder le texte utile
-        const raw = proxyData.contents || "";
-        pageContent = raw
-          .replace(/<script[\s\S]*?<\/script>/gi, "")
-          .replace(/<style[\s\S]*?<\/style>/gi, "")
-          .replace(/<[^>]+>/g, " ")
-          .replace(/\s{3,}/g, "\n")
-          .slice(0, 6000); // limiter pour rester dans le contexte
-      } catch {
-        throw new Error("Impossible d'accéder à la page — vérifie l'URL ou essaie depuis un PC");
-      }
-
-      if (!pageContent.trim()) throw new Error("Page vide ou inaccessible");
-
-      const PROMPT = `Tu es un expert en clés automobile aftermarket. Voici le contenu texte d'une page produit (URL: ${url}).
-
-Extrait PRÉCISÉMENT ces informations. Réponds UNIQUEMENT en JSON valide, sans backticks ni texte autour :
-{
-  "nom": "nom complet du produit",
-  "ref": "référence / SKU fabricant",
-  "marque": "marque(s) de véhicule(s) (ex: Renault, Peugeot)",
-  "modeles": "liste complète des modèles compatibles (ex: Clio 3, Mégane 2, Kangoo)",
-  "annees": "plage d'années (ex: 2005-2015)",
-  "freq": "fréquence radio (ex: 433.92 MHz)",
-  "lame": "référence de la lame mécanique (ex: VA2, HU83, SIP22)",
-  "transpondeur": "type de transpondeur/puce (ex: ID46, HITAG2, PCF7936)",
-  "boutons": "nombre de boutons (ex: 3)",
-  "pile": "type de pile (ex: CR2032, CR1620)",
-  "mainLibre": "oui ou non selon si compatible main libre / keyless",
-  "type": "Clé ou Télécommande ou Coque ou Transpondeur",
-  "prix": "prix en chiffres uniquement si visible (ex: 12.50)",
-  "image": "URL directe de la photo principale si présente dans le contenu"
-}
-Si une info n'est pas trouvée, mets "". Ne devine pas.
-
-CONTENU DE LA PAGE :
-${pageContent}`;
-
-      // 2. Appel à l'API Anthropic
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: PROMPT }],
-        }),
+      const res = await fetch("/api/analyse-produit", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || `Erreur API (${response.status})`);
-
-      const textBlock = [...(data.content || [])].reverse().find(b => b.type === "text");
-      if (!textBlock) throw new Error("Réponse vide de l'IA");
-
-      let parsed;
-      try {
-        const clean = textBlock.text.replace(/```json|```/g, "").trim();
-        const jsonMatch = clean.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : clean);
-      } catch {
-        throw new Error("Format de réponse invalide — réessaie");
-      }
-
+      const data = await res.json();
+      if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
       setForm(prev => ({
         ...prev,
-        nom:          parsed.nom          || prev.nom,
-        ref:          parsed.ref          || prev.ref,
-        marque:       parsed.marque       || prev.marque,
-        modeles:      parsed.modeles      || prev.modeles,
-        annees:       parsed.annees       || prev.annees,
-        prix:         parsed.prix         || prev.prix,
-        type:         parsed.type         || prev.type,
-        freq:         parsed.freq         || prev.freq,
-        transpondeur: parsed.transpondeur || prev.transpondeur,
-        lame:         parsed.lame         || prev.lame,
-        pile:         parsed.pile         || prev.pile,
-        boutons:      parsed.boutons      || prev.boutons,
-        mainLibre:    parsed.mainLibre    || prev.mainLibre,
-        image:        parsed.image        || prev.image || "",
+        nom: data.nom || prev.nom,
+        ref: data.ref || prev.ref,
+        marque: data.marque || prev.marque,
+        modeles: data.modeles || prev.modeles,
+        prix: data.prix || prev.prix,
+        type: data.type || prev.type,
+        freq: data.freq || prev.freq,
+        transpondeur: data.transpondeur || prev.transpondeur,
+        lame: data.lame || prev.lame,
+        pile: data.pile || prev.pile,
+        image: data.image || prev.image || "",
       }));
-
-      const missing = REQUIRED.filter(f => !parsed[f.key] || parsed[f.key] === "").map(f => f.label);
-      setMissingFields(missing);
       setAnalysed(true);
-    } catch (e) {
-      setErrorMsg(e.message || "Erreur lors de l'analyse");
-    }
+    } catch { setErrorMsg("Erreur réseau — vérifie ta connexion"); }
     setLoading(false);
   };
 
   const handleConfirm = () => {
-    if (!form.nom.trim()) return;
+    const newErrors = {};
+    REQUIRED.forEach(k => { if (!form[k]?.trim()) newErrors[k] = true; });
+    if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
     const newProd = {
       id: "manuel-" + Date.now(),
       nom: form.nom.trim(),
@@ -4587,8 +4506,8 @@ ${pageContent}`;
       transpondeur: form.transpondeur.trim(),
       lame: form.lame.trim(),
       pile: form.pile.trim(),
-      boutons: form.boutons.toString().trim(),
-      mainLibre: form.mainLibre.trim(),
+      boutons: form.boutons.trim(),
+      mainLibre: form.mainLibre,
       emoji: "🔑",
       image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
@@ -4597,17 +4516,22 @@ ${pageContent}`;
     onProductCreated(newProd);
   };
 
-  const inp = {
-    width: "100%", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.2)",
+  const inp = (hasError) => ({
+    width: "100%", background: hasError ? "rgba(255,71,87,0.06)" : "#e8edf8",
+    border: `1px solid ${hasError ? "#ff4757" : "rgba(108,99,255,0.2)"}`,
     borderRadius: 12, padding: "10px 12px", color: "#1a1d2e", fontSize: 13,
     outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box",
-  };
-  const inpMissing = { ...inp, border: "1px solid rgba(255,167,38,0.6)", background: "rgba(255,167,38,0.05)" };
-  const lbl = { fontSize: 11, fontWeight: 600, color: "#5a6585", marginBottom: 4, display: "block" };
-  const lblMissing = { ...lbl, color: "#e65c00" };
+  });
+  const lbl = (required, hasError) => ({
+    fontSize: 11, fontWeight: 600,
+    color: hasError ? "#ff4757" : required ? "#1a1d2e" : "#5a6585",
+    marginBottom: 4, display: "block",
+  });
   const row = { marginBottom: 11 };
+  const reqMark = <span style={{ color: "#ff4757", marginLeft: 2 }}>*</span>;
 
-  const isMissing = (key) => missingFields.includes(REQUIRED.find(f => f.key === key)?.label);
+  const missingCount = REQUIRED.filter(k => !form[k]?.trim()).length;
+  const canSubmit = missingCount === 0;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", zIndex: 600, display: "flex", alignItems: "flex-end" }}>
@@ -4617,165 +4541,146 @@ ${pageContent}`;
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 800, color: "#1a1d2e" }}>➕ Ajouter un produit</div>
-            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>L'IA analyse la page et remplit tous les champs</div>
+            <div style={{ fontSize: 11, color: "#5a6585", marginTop: 3 }}>Colle l'URL — l'IA remplit la fiche automatiquement</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#5a6585", fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
-        {/* URL + bouton analyser */}
-        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, marginTop: 10 }}>
-          <label style={{ ...lbl, color: "#6c63ff" }}>🔗 URL de la page produit</label>
+        {/* Compteur champs manquants */}
+        {missingCount > 0 && (
+          <div style={{ background: "rgba(255,71,87,0.06)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#ff4757", fontWeight: 600 }}>
+            {missingCount} champ{missingCount > 1 ? "s" : ""} obligatoire{missingCount > 1 ? "s" : ""} à renseigner
+          </div>
+        )}
+
+        {/* URL + analyser */}
+        <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", marginBottom: 4, display: "block" }}>🔗 URL de la page produit</label>
           <div style={{ display: "flex", gap: 8 }}>
-            <input
-              value={form.lien}
-              onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); setMissingFields([]); }}
+            <input value={form.lien} onChange={e => { set("lien", e.target.value); setAnalysed(false); setErrorMsg(""); }}
               onKeyDown={e => e.key === "Enter" && form.lien.trim() && handleAnalyse()}
-              placeholder="https://www.mk3.com/fr/... ou autre fournisseur"
-              style={{ ...inp, background: "#fff", flex: 1 }}
-              autoFocus
-              inputMode="url"
-            />
-            <button
-              onClick={handleAnalyse}
-              disabled={loading || !form.lien.trim()}
+              placeholder="https://www.fournisseur.fr/produit/..."
+              style={{ ...inp(false), background: "#fff", flex: 1 }} autoFocus inputMode="url" />
+            <button onClick={handleAnalyse} disabled={loading || !form.lien.trim()}
               style={{ flexShrink: 0, padding: "10px 14px", borderRadius: 12, border: "none", background: loading ? "#a0a0a0" : "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: loading || !form.lien.trim() ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-              {loading
-                ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</>
-                : "🔍 Analyser"}
+              {loading ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Analyse…</> : "🔍 Analyser"}
             </button>
           </div>
           <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-          {errorMsg && (
-            <div style={{ marginTop: 8, background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#ff4757", fontWeight: 600 }}>⚠ {errorMsg}</div>
-          )}
-          {analysed && missingFields.length === 0 && (
-            <div style={{ marginTop: 8, background: "rgba(0,245,147,0.08)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#00b87a", fontWeight: 600 }}>✅ Tous les champs remplis — vérifie et valide</div>
-          )}
-          {analysed && missingFields.length > 0 && (
-            <div style={{ marginTop: 8, background: "rgba(255,167,38,0.08)", border: "1px solid rgba(255,167,38,0.3)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#e65c00", fontWeight: 600 }}>
-              ⚠ Champs non trouvés — à compléter manuellement :<br/>
-              <span style={{ fontWeight: 400 }}>{missingFields.join(", ")}</span>
-            </div>
-          )}
+          {errorMsg && <div style={{ marginTop: 8, background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#ff4757", fontWeight: 600 }}>⚠ {errorMsg}</div>}
+          {analysed && <div style={{ marginTop: 8, background: "rgba(0,245,147,0.08)", border: "1px solid rgba(0,245,147,0.25)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#00b87a", fontWeight: 600 }}>✅ Fiche remplie — vérifie et complète les champs obligatoires</div>}
         </div>
 
         {/* Nom */}
         <div style={row}>
-          <label style={lbl}>Nom du produit *</label>
-          <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 3 boutons 433MHz" style={inp} />
+          <label style={lbl(true, errors.nom)}>Nom du produit{reqMark}</label>
+          <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="ex: Clé Renault Clio 4 boutons 433MHz" style={inp(errors.nom)} />
         </div>
 
-        {/* Grille 2 colonnes — infos de base */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div style={row}>
-            <label style={lbl}>Référence / SKU</label>
-            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: VA2-433-ID46" style={inp} />
+        {/* Ref + Prix */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
+          <div>
+            <label style={lbl(false, false)}>Référence / SKU</label>
+            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: VA2-433-ID46" style={inp(false)} />
           </div>
-          <div style={row}>
-            <label style={lbl}>Prix d'achat (€)</label>
-            <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp} />
+          <div>
+            <label style={lbl(false, false)}>Prix d'achat (€)</label>
+            <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp(false)} />
           </div>
-          <div style={row}>
-            <label style={lbl}>Marque véhicule</label>
-            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp} />
+        </div>
+
+        {/* Marque + Type */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
+          <div>
+            <label style={lbl(false, false)}>Marque véhicule</label>
+            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp(false)} />
           </div>
-          <div style={row}>
-            <label style={lbl}>Type</label>
-            <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp, appearance: "none" }}>
+          <div>
+            <label style={lbl(false, false)}>Type</label>
+            <select value={form.type} onChange={e => set("type", e.target.value)} style={{ ...inp(false), appearance: "none" }}>
               {["Clé","Télécommande","Coque","Transpondeur","Lame","Accessoire"].map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
         </div>
 
-        {/* Section champs obligatoires */}
-        <div style={{ background: "rgba(108,99,255,0.04)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 14, padding: "12px 14px", marginBottom: 11 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#6c63ff", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>🔑 Données techniques</div>
+        {/* Séparateur champs obligatoires */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "14px 0 12px" }}>
+          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.2)" }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#ff4757", letterSpacing: 1, textTransform: "uppercase" }}>Champs obligatoires</span>
+          <div style={{ flex: 1, height: 1, background: "rgba(255,71,87,0.2)" }} />
+        </div>
 
-          <div style={row}>
-            <label style={isMissing("modeles") ? lblMissing : lbl}>
-              Modèles compatibles {isMissing("modeles") && "⚠"}
-            </label>
-            <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo (2005-2012)" style={isMissing("modeles") ? inpMissing : inp} />
+        {/* Modèles compatibles */}
+        <div style={row}>
+          <label style={lbl(true, errors.modeles)}>Modèles compatibles{reqMark}</label>
+          <input value={form.modeles} onChange={e => set("modeles", e.target.value)} placeholder="ex: Clio 3, Mégane 2, Kangoo" style={inp(errors.modeles)} />
+        </div>
+
+        {/* Années + Lame */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
+          <div>
+            <label style={lbl(true, errors.annees)}>Années{reqMark}</label>
+            <input value={form.annees} onChange={e => set("annees", e.target.value)} placeholder="ex: 2012 – 2020" style={inp(errors.annees)} />
           </div>
+          <div>
+            <label style={lbl(true, errors.lame)}>Type de lame{reqMark}</label>
+            <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2, HU66" style={inp(errors.lame)} />
+          </div>
+        </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div style={row}>
-              <label style={isMissing("annees") ? lblMissing : lbl}>
-                Années {isMissing("annees") && "⚠"}
-              </label>
-              <input value={form.annees} onChange={e => set("annees", e.target.value)} placeholder="ex: 2005-2015" style={isMissing("annees") ? inpMissing : inp} />
-            </div>
-            <div style={row}>
-              <label style={isMissing("lame") ? lblMissing : lbl}>
-                Lame {isMissing("lame") && "⚠"}
-              </label>
-              <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2, HU83" style={isMissing("lame") ? inpMissing : inp} />
-            </div>
-            <div style={row}>
-              <label style={isMissing("freq") ? lblMissing : lbl}>
-                Fréquence {isMissing("freq") && "⚠"}
-              </label>
-              <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433.92 MHz" style={isMissing("freq") ? inpMissing : inp} />
-            </div>
-            <div style={row}>
-              <label style={lbl}>Transpondeur</label>
-              <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp} />
-            </div>
-            <div style={row}>
-              <label style={isMissing("boutons") ? lblMissing : lbl}>
-                Boutons {isMissing("boutons") && "⚠"}
-              </label>
-              <input value={form.boutons} onChange={e => set("boutons", e.target.value)} placeholder="ex: 3" style={isMissing("boutons") ? inpMissing : inp} />
-            </div>
-            <div style={row}>
-              <label style={isMissing("pile") ? lblMissing : lbl}>
-                Pile {isMissing("pile") && "⚠"}
-              </label>
-              <input value={form.pile} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={isMissing("pile") ? inpMissing : inp} />
-            </div>
-            <div style={{ ...row, gridColumn: "span 2" }}>
-              <label style={isMissing("mainLibre") ? lblMissing : lbl}>
-                Main libre (Keyless) {isMissing("mainLibre") && "⚠"}
-              </label>
-              <div style={{ display: "flex", gap: 8 }}>
-                {["oui", "non", ""].map((v, i) => (
-                  <button key={i} onClick={() => set("mainLibre", v)}
-                    style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `1px solid ${form.mainLibre === v && v !== "" ? "#6c63ff" : "rgba(108,99,255,0.2)"}`, background: form.mainLibre === v && v !== "" ? "#6c63ff" : "transparent", color: form.mainLibre === v && v !== "" ? "#fff" : "#5a6585", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                    {v === "" ? "—" : v === "oui" ? "✓ Oui" : "✗ Non"}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Fréquence + Transpondeur */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 11 }}>
+          <div>
+            <label style={lbl(true, errors.freq)}>Fréquence{reqMark}</label>
+            <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433 MHz" style={inp(errors.freq)} />
+          </div>
+          <div>
+            <label style={lbl(false, false)}>Transpondeur</label>
+            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp(false)} />
+          </div>
+        </div>
+
+        {/* Pile + Boutons + Main libre */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 11 }}>
+          <div>
+            <label style={lbl(true, errors.pile)}>Type de pile{reqMark}</label>
+            <input value={form.pile} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp(errors.pile)} />
+          </div>
+          <div>
+            <label style={lbl(true, errors.boutons)}>Nb boutons{reqMark}</label>
+            <input type="number" min="1" max="10" value={form.boutons} onChange={e => set("boutons", e.target.value)} placeholder="ex: 3" style={inp(errors.boutons)} />
+          </div>
+          <div>
+            <label style={lbl(true, errors.mainLibre)}>Main libre{reqMark}</label>
+            <select value={form.mainLibre} onChange={e => set("mainLibre", e.target.value)} style={{ ...inp(errors.mainLibre), appearance: "none", color: form.mainLibre ? "#1a1d2e" : "#8890aa" }}>
+              <option value="">—</option>
+              <option value="oui">Oui</option>
+              <option value="non">Non</option>
+            </select>
           </div>
         </div>
 
         {/* Photo */}
-        <div style={{ ...row, background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px" }}>
-          <label style={{ ...lbl, color: "#6c63ff" }}>📸 Photo du produit</label>
+        <div style={{ background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 12, padding: "10px 12px", marginBottom: 11 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", marginBottom: 4, display: "block" }}>📸 URL de la photo</label>
           <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
             {form.image && form.image !== FALLBACK_IMG && (
               <img src={form.image} alt="" onError={e => { e.target.style.display="none"; }}
-                style={{ width: 60, height: 60, objectFit: "contain", borderRadius: 8, background: "#e8edf8", flexShrink: 0, border: "1px solid rgba(108,99,255,0.2)" }} />
+                style={{ width: 52, height: 52, objectFit: "contain", borderRadius: 8, background: "#e8edf8", flexShrink: 0, border: "1px solid rgba(108,99,255,0.2)" }} />
             )}
-            <input
-              value={form.image === FALLBACK_IMG ? "" : (form.image || "")}
-              onChange={e => set("image", e.target.value)}
-              placeholder="URL directe de l'image (.jpg / .webp)"
-              style={{ ...inp, fontSize: 11 }}
-              inputMode="url"
-            />
+            <input value={form.image === FALLBACK_IMG ? "" : (form.image || "")} onChange={e => set("image", e.target.value)}
+              placeholder="Appui long sur la photo → Copier le lien" style={{ ...inp(false), fontSize: 11 }} inputMode="url" />
           </div>
         </div>
 
         {/* Boutons */}
         <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-          <button onClick={onClose}
-            style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
             Annuler
           </button>
-          <button onClick={handleConfirm} disabled={!form.nom.trim()}
-            style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: form.nom.trim() ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.3)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: form.nom.trim() ? "pointer" : "default" }}>
-            ✅ Créer la fiche produit
+          <button onClick={handleConfirm} disabled={!canSubmit}
+            style={{ flex: 2, padding: 13, borderRadius: 12, border: "none", background: canSubmit ? "linear-gradient(135deg,#6c63ff,#00d4ff)" : "rgba(108,99,255,0.25)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: canSubmit ? "pointer" : "default", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+            {canSubmit ? "✅ Créer la fiche produit" : `${missingCount} champ${missingCount > 1 ? "s" : ""} manquant${missingCount > 1 ? "s" : ""}`}
           </button>
         </div>
 
