@@ -233,68 +233,17 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
             {onUpdateNom && <button onClick={() => setEditingNom(true)} style={{ background: "none", border: "none", color: "#5a6585", cursor: "pointer", padding: "2px 6px", fontSize: 14, marginLeft: 8, opacity: 0.6 }}>✏️</button>}
           </div>
         )}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, marginBottom: 8 }}>
-          {p.type && <span style={{ fontSize: 10, fontWeight: 800, color: "#6c63ff", background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.3)", padding: "2px 8px", borderRadius: 5 }}>{p.type}</span>}
-          {p.ref && <span style={{ fontSize: 10, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "2px 9px", borderRadius: 5 }}>{p.ref}</span>}
-          {p.marque && <span style={{ fontSize: 10, fontWeight: 700, color: "#cc0000", background: "rgba(204,0,0,0.08)", padding: "2px 7px", borderRadius: 5 }}>{p.marque}</span>}
-          {p.prox && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#cc0000", padding: "2px 8px", borderRadius: 5 }}>🔒 Proximité</span>}
-        </div>
-
-        {/* Véhicules compatibles */}
-        {p.applications && p.applications.length > 0 && (
-          <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", marginBottom: 8, border: "1px solid rgba(108,99,255,0.15)" }}>
-            <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Véhicules compatibles ({p.applications.length})</div>
-            {p.applications.map((a, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < p.applications.length - 1 ? "1px solid rgba(108,99,255,0.08)" : "none" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{a.make} <span style={{ fontWeight: 600 }}>{a.model}</span></span>
-                <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                  {a.ref && <span style={{ fontSize: 9, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "1px 6px", borderRadius: 4 }}>{a.ref}</span>}
-                  {(a.yearFrom || a.yearTo) && <span style={{ fontSize: 10, color: "#5a6585" }}>{a.yearFrom}{a.yearTo && a.yearTo !== a.yearFrom ? `–${a.yearTo}` : ""}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Specs techniques */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 8 }}>
-          {[
-            p.lame && ["Lame", p.lame],
-            (p.buttons || p.boutons) && ["Boutons", (p.buttons || p.boutons) + " boutons"],
-            (p.freq || p.frequence) && ["Fréquence", p.freq || p.frequence],
-            p.transpondeur && ["Transpondeur", p.transpondeur],
-            p.modeles && !p.applications?.length && ["Modèles", p.modeles],
-            p.xhorse && ["Xhorse", p.xhorse],
-            p.notes && ["Notes", p.notes],
-            p.pile && ["Pile", p.pile],
-          ].filter(Boolean).map(([label, val]) => (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 14 }}>
+          {[["Marque", p.marque], ["Modèles", p.modeles || "—"], p.type && ["Type", p.type], p.frequence && ["Fréquence", p.frequence], p.transpondeur && ["Transpondeur", p.transpondeur], p.lame && ["Lame", p.lame], p.pile && ["Pile", p.pile]].filter(Boolean).map(([label, val]) => (
             <div key={label} style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}>
               <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
               <div style={{ fontSize: 12.5, color: "#1a1d2e", fontWeight: 600, marginTop: 2 }}>{val}</div>
             </div>
           ))}
-          {p.prix > 0 && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Prix indicatif</div><div style={{ fontSize: 12.5, color: "#e8a020", fontWeight: 800, marginTop: 2 }}>{p.prix.toFixed(2)} €</div></div>}
+          {p.xhorse && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Xhorse</div><div style={{ fontSize: 12.5, color: "#f472b6", fontWeight: 600, marginTop: 2 }}>{p.xhorse}</div></div>}
+          {p.notes && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)", gridColumn: "1/-1" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Notes</div><div style={{ fontSize: 12.5, color: "#1a1d2e", fontWeight: 600, marginTop: 2 }}>{p.notes}</div></div>}
+          {p.prix && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Prix indicatif</div><div style={{ fontSize: 12.5, color: "#e8a020", fontWeight: 800, marginTop: 2 }}>{p.prix.toFixed(2)} €</div></div>}
         </div>
-
-        {/* OE Part Numbers / liens */}
-        {(p.oeLinks?.length > 0 || p.lien) && (
-          <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", marginTop: 8, border: "1px solid rgba(108,99,255,0.15)" }}>
-            <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>🔗 OE Part Numbers</div>
-            {p.oeLinks?.map((lk, i) => (
-              <a key={i} href={lk.url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < p.oeLinks.length - 1 ? "1px solid rgba(108,99,255,0.08)" : "none", textDecoration: "none" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#6c63ff" }}>{lk.label}</span>
-                <span style={{ fontSize: 10, color: "#5a6585", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lk.url}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-              </a>
-            ))}
-            {p.lien && !p.oeLinks?.length && (
-              <a href={p.lien} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#6c63ff" }}>Voir le produit</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-              </a>
-            )}
-          </div>
-        )}
 
         {/* Modifier le prix */}
         {onUpdatePrix && (
