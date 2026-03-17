@@ -79,6 +79,8 @@ const SearchIcon = () => <Icon d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0
 const KeyIcon = () => <Icon d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />;
 
 
+const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
+
 // ============================================================
 // =================== DETAIL PAGE COMPONENT =================
 // ============================================================
@@ -3523,12 +3525,11 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   );
 }
 
-function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
+function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
   const [marque, setMarque] = useState("");
   const [modele, setModele] = useState("");
   const [annee, setAnnee] = useState("");
   const [result, setResult] = useState(null);
-  const [freeSearch, setFreeSearch] = useState(initialSearch || "");
   const [activeTab, setActiveTab] = useState("xhorse");
   const [xhorseMarque, setXhorseMarque] = useState("");
   const [xhorseModele, setXhorseModele] = useState("");
@@ -3591,18 +3592,6 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
     for (let y = veh.debut; y <= (veh.fin || 2025); y++) list.push(y);
     return list;
   }, [marque, modele]);
-
-  const freeResults = useMemo(() => {
-    if (!freeSearch.trim()) return [];
-    const q = freeSearch.toLowerCase();
-    return products.filter(function(p) {
-      return p.nom.toLowerCase().includes(q) ||
-        p.ref.toLowerCase().includes(q) ||
-        (p.lame && p.lame.toLowerCase().includes(q)) ||
-        (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
-        (p.marque && p.marque.toLowerCase().includes(q));
-    });
-  }, [freeSearch, products]);
 
   function handleSearch() {
     if (!marque || !modele) return;
@@ -4179,8 +4168,6 @@ function InterventionForm({ clients, products, onSave, onClose, defaultClientId,
   );
 }
 
-const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#e8edf8"/><text x="40" y="48" text-anchor="middle" font-size="32">🔑</text></svg>')}`;
-
 // ============================================================
 // ============= AJOUT PRODUIT AVEC ANALYSE URL ===============
 // ============================================================
@@ -4452,7 +4439,7 @@ export default function App() {
 
 
   const statsData = useMemo(() => {
-    const totalRefs = products.length;
+
     const okCount = products.filter(p => {
       const s = stock[p.id];
       return !s?.init && s?.qty > (s?.seuil || SEUIL_DEFAULT);
@@ -4468,7 +4455,7 @@ export default function App() {
       const manquant = Math.max(0, (s?.seuil || SEUIL_DEFAULT) + 2 - (s?.qty ?? 0));
       return sum + manquant * (p.prix || 0);
     }, 0);
-    return { totalRefs, okCount, alertCount, valeurStock, budgetCommande };
+    return { okCount, alertCount, valeurStock, budgetCommande };
   }, [stock, lowStockProducts, products]);
 
   // Persist stock to localStorage on every change
@@ -4568,7 +4555,7 @@ export default function App() {
     manualBtn: { padding: "10px 16px", borderRadius: 12, border: "none", cursor: "pointer", background: XH.grad1, color: "#fff", fontWeight: 600, fontSize: 13, boxShadow: `0 4px 20px ${XH.accent}44`, fontFamily: "'Plus Jakarta Sans', sans-serif" },
     googleBtn: { width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(66,133,244,0.3)", cursor: "pointer", background: "rgba(66,133,244,0.1)", color: "#4285f4", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, fontFamily: "'Plus Jakarta Sans', sans-serif" },
     linkBtn: (bg, color) => ({ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: bg, color: color, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", fontFamily: "'Plus Jakarta Sans', sans-serif" }),
-    statsRow: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 20 },
+
     statBox: { background: "#e8edf8", borderRadius: 16, padding: "14px 6px", border: `1px solid ${XH.border}`, textAlign: "center", position: "relative", overflow: "hidden" },
     statNum: { fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, color: XH.accent },
     statLabel: { fontSize: 8, color: "#5a6585", fontWeight: 600, textTransform: "uppercase", marginTop: 4, letterSpacing: 0.6 },
@@ -4587,18 +4574,17 @@ export default function App() {
   // =================== RENDERS ===================
   const renderHome = () => (
     <div style={S.page}>
-      <div style={S.statsRow}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
         {[
-          { val: statsData.totalRefs, label: "Réfs", color: "#6c63ff" },
           { val: statsData.okCount, label: "OK", color: "#00f593" },
           { val: statsData.alertCount, label: "Alertes", color: statsData.alertCount > 0 ? "#ff4757" : "#00f593" },
           { val: statsData.valeurStock.toFixed(0) + "€", label: "Valeur", color: "#00d4ff" },
           { val: statsData.budgetCommande.toFixed(0) + "€", label: "Budget", color: "#ffa726", clickable: statsData.alertCount > 0 },
         ].map((s, i) => (
-          <div key={i} className="mrkey-stat" onClick={i === 4 && s.clickable ? exportCSV : undefined}
-            style={{ ...S.statBox, cursor: i === 4 && s.clickable ? "pointer" : "default", background: i === 4 && s.clickable ? "rgba(255,167,38,0.06)" : S.statBox.background }}>
+          <div key={i} className="mrkey-stat" onClick={i === 3 && s.clickable ? exportCSV : undefined}
+            style={{ ...S.statBox, cursor: i === 3 && s.clickable ? "pointer" : "default", background: i === 3 && s.clickable ? "rgba(255,167,38,0.06)" : S.statBox.background }}>
             <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 900, color: s.color, lineHeight: 1.1 }}>{s.val}</div>
-            <div style={S.statLabel}>{s.label}{i === 4 && s.clickable ? " 📥" : ""}</div>
+            <div style={S.statLabel}>{s.label}{i === 3 && s.clickable ? " 📥" : ""}</div>
           </div>
         ))}
       </div>
@@ -4658,33 +4644,37 @@ export default function App() {
         </div>
       </div>
 
-      <div style={S.sectionTitle}>Recherche par référence</div>
+      <div style={S.sectionTitle}>Catalogue ({products.length} clé{products.length !== 1 ? "s" : ""})</div>
       <div style={{ position: "relative", marginBottom: 10 }}>
         <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}><SearchIcon /></span>
         <input style={S.searchInput} placeholder="Référence, lame, transpondeur…"
           value={search} onChange={e => setSearch(e.target.value)} />
         {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#5a6585", fontSize: 16 }}>✕</button>}
       </div>
-      {search.trim() && (
-        filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat pour « {search} »</div>
-        ) : filtered.map(p => {
-          const s = stock[p.id];
-          const isInit = s?.init;
-          const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
-          return (
-            <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
-              <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
-              <div style={S.cardBody}>
-                <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
-                <div style={S.cardName}>{p.nom}</div>
-                <div style={S.cardRef}>{p.ref}</div>
-                <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
-              </div>
+      {products.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#5a6585" }}>
+          <div style={{ fontSize: 36, marginBottom: 10 }}>🔑</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Catalogue vide</div>
+          <div style={{ fontSize: 12, marginTop: 6 }}>Ajoutez des clés depuis l'onglet Véhicule</div>
+        </div>
+      ) : filtered.length === 0 && search.trim() ? (
+        <div style={{ textAlign: "center", padding: "24px 0", color: "#5a6585", fontSize: 13 }}>Aucun résultat pour « {search} »</div>
+      ) : (search.trim() ? filtered : products).map(p => {
+        const s = stock[p.id];
+        const isInit = s?.init;
+        const isLow = !isInit && s?.qty <= (s?.seuil || SEUIL_DEFAULT);
+        return (
+          <div key={p.id} className="mrkey-card" style={S.card} onClick={() => { setSelectedProduct(p); setPage("detail"); }}>
+            <img src={p.image} alt={p.nom} style={S.cardImg} onError={e => { e.target.src = FALLBACK_IMG; }} />
+            <div style={S.cardBody}>
+              <div style={S.cardCat(p.categorie)}>{p.categorie}</div>
+              <div style={S.cardName}>{p.nom}</div>
+              <div style={S.cardRef}>{p.ref}</div>
+              <span style={S.badge(isLow)}>{isInit ? "— à saisir" : isLow ? `⚠ ${s?.qty}` : `✓ ${s?.qty}`}</span>
             </div>
-          );
-        })
-      )}
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -5339,8 +5329,7 @@ export default function App() {
             setSelectedProduct={setSelectedProduct}
             setPage={setPage}
             setIntervFormProduct={function(p) { setIntervFormProduct(p); setShowIntervForm(true); }}
-            initialSearch={search}
-            initialTab={xhorseTab ? "xhorse" : undefined}
+
             oeLinksOverrides={oeLinksOverrides}
             setOeLinksOverrides={setOeLinksOverrides}
             onShowAddProduit={() => setShowUrlImport(true)}
