@@ -233,17 +233,68 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
             {onUpdateNom && <button onClick={() => setEditingNom(true)} style={{ background: "none", border: "none", color: "#5a6585", cursor: "pointer", padding: "2px 6px", fontSize: 14, marginLeft: 8, opacity: 0.6 }}>✏️</button>}
           </div>
         )}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 14 }}>
-          {[["Marque", p.marque], ["Modèles", p.modeles || "—"], p.type && ["Type", p.type], p.frequence && ["Fréquence", p.frequence], p.transpondeur && ["Transpondeur", p.transpondeur], p.lame && ["Lame", p.lame], p.pile && ["Pile", p.pile]].filter(Boolean).map(([label, val]) => (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, marginBottom: 8 }}>
+          {p.type && <span style={{ fontSize: 10, fontWeight: 800, color: "#6c63ff", background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.3)", padding: "2px 8px", borderRadius: 5 }}>{p.type}</span>}
+          {p.ref && <span style={{ fontSize: 10, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "2px 9px", borderRadius: 5 }}>{p.ref}</span>}
+          {p.marque && <span style={{ fontSize: 10, fontWeight: 700, color: "#cc0000", background: "rgba(204,0,0,0.08)", padding: "2px 7px", borderRadius: 5 }}>{p.marque}</span>}
+          {p.prox && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#cc0000", padding: "2px 8px", borderRadius: 5 }}>🔒 Proximité</span>}
+        </div>
+
+        {/* Véhicules compatibles */}
+        {p.applications && p.applications.length > 0 && (
+          <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", marginBottom: 8, border: "1px solid rgba(108,99,255,0.15)" }}>
+            <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Véhicules compatibles ({p.applications.length})</div>
+            {p.applications.map((a, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < p.applications.length - 1 ? "1px solid rgba(108,99,255,0.08)" : "none" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>{a.make} <span style={{ fontWeight: 600 }}>{a.model}</span></span>
+                <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                  {a.ref && <span style={{ fontSize: 9, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "1px 6px", borderRadius: 4 }}>{a.ref}</span>}
+                  {(a.from || a.to) && <span style={{ fontSize: 10, color: "#5a6585" }}>{a.from}{a.to && a.to !== a.from ? `–${a.to}` : ""}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Specs techniques */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 8 }}>
+          {[
+            p.lame && ["Lame", p.lame],
+            (p.buttons || p.boutons) && ["Boutons", (p.buttons || p.boutons) + " boutons"],
+            (p.freq || p.frequence) && ["Fréquence", p.freq || p.frequence],
+            p.transpondeur && ["Transpondeur", p.transpondeur],
+            p.pile && ["Pile", p.pile],
+            p.modeles && !p.applications?.length && ["Modèles", p.modeles],
+            p.xhorse && ["Xhorse", p.xhorse],
+            p.notes && ["Notes", p.notes],
+          ].filter(Boolean).map(([label, val]) => (
             <div key={label} style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}>
               <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
               <div style={{ fontSize: 12.5, color: "#1a1d2e", fontWeight: 600, marginTop: 2 }}>{val}</div>
             </div>
           ))}
-          {p.xhorse && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Xhorse</div><div style={{ fontSize: 12.5, color: "#f472b6", fontWeight: 600, marginTop: 2 }}>{p.xhorse}</div></div>}
-          {p.notes && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)", gridColumn: "1/-1" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Notes</div><div style={{ fontSize: 12.5, color: "#1a1d2e", fontWeight: 600, marginTop: 2 }}>{p.notes}</div></div>}
-          {p.prix && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Prix indicatif</div><div style={{ fontSize: 12.5, color: "#e8a020", fontWeight: 800, marginTop: 2 }}>{p.prix.toFixed(2)} €</div></div>}
+          {p.prix > 0 && <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", border: "1px solid rgba(108,99,255,0.15)" }}><div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Prix indicatif</div><div style={{ fontSize: 12.5, color: "#e8a020", fontWeight: 800, marginTop: 2 }}>{p.prix.toFixed(2)} €</div></div>}
         </div>
+
+        {/* OE Part Numbers / liens */}
+        {(p.oeLinks?.length > 0 || p.lien) && (
+          <div style={{ background: "#dde3f2", borderRadius: 12, padding: "10px 12px", marginTop: 8, border: "1px solid rgba(108,99,255,0.15)" }}>
+            <div style={{ fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>🔗 OE Part Numbers</div>
+            {p.oeLinks?.map((lk, i) => (
+              <a key={i} href={lk.url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < p.oeLinks.length - 1 ? "1px solid rgba(108,99,255,0.08)" : "none", textDecoration: "none" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#6c63ff" }}>{lk.label}</span>
+                <span style={{ fontSize: 10, color: "#5a6585", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lk.url}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+              </a>
+            ))}
+            {p.lien && !p.oeLinks?.length && (
+              <a href={p.lien} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#6c63ff" }}>Voir le produit</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Modifier le prix */}
         {onUpdatePrix && (
@@ -3026,20 +3077,22 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   function doAdd(entry) {
     if (added[entry.ref]) return;
     const mainApp = entry.applications[0];
-    const label   = mainApp ? `${mainApp.make} ${mainApp.model}` : entry.marque;
+    const marqueVehicule = mainApp ? mainApp.make : (entry.marque || "");
+    const modeles = entry.applications ? entry.applications.map(a => a.model).filter(Boolean).join(", ") : "";
+    const label = mainApp ? `${mainApp.make} ${mainApp.model}` : entry.marque;
     onAddToStock && onAddToStock({
       id:            "silca-" + entry.ref + "-" + Date.now(),
       nom:           label + " · " + TLBL[entry.type] + " [" + entry.ref + "]",
       ref:           entry.ref,
       lame:          entry.blade,
-      marque:        "Aftermarket",
-      marqueVehicule: entry.marque,
+      marque:        marqueVehicule,
+      modeles:       modeles,
       transpondeur:  entry.transponder || "",
       freq:          entry.freq,
-      type:          "Aftermarket " + TLBL[entry.type],
+      type:          TLBL[entry.type] || "Clé",
       buttons:       entry.buttons,
       prix:          0,
-      categorie:     "Stock",
+      categorie:     "Aftermarket France",
       emoji:         TICON[entry.type],
       silcaType:     entry.type,
       applications:  entry.applications,
@@ -3483,7 +3536,7 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   );
 }
 
-function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides }) {
+function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
   const [marque, setMarque] = useState("");
   const [modele, setModele] = useState("");
   const [annee, setAnnee] = useState("");
@@ -3676,6 +3729,18 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
   return (
     <div style={{ padding: "16px 16px 110px", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
 
+      {/* Bouton ajouter produit */}
+      <button onClick={() => onShowAddProduit && onShowAddProduit()}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 16, padding: "12px 16px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
+        <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>➕</div>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit</div>
+          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Colle l'URL — la fiche se remplit automatiquement</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
       <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
         <button onClick={function() { setActiveTab("xhorse"); }}
           style={{ flex: 1, padding: "11px 8px", borderRadius: 14, border: "1px solid " + (activeTab === "xhorse" ? "#ea580c" : "rgba(234,88,12,0.2)"), background: activeTab === "xhorse" ? "#ea580c" : "transparent", color: activeTab === "xhorse" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
@@ -3839,11 +3904,12 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                                   type: "Xhorse",
                                   ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx,
                                   prix: 0,
-                                  categorie: "Stock",
+                                  categorie: "Xhorse",
                                   emoji: "🔑",
                                   image: keyPhoto || entry.image,
                                   remotes: entry.remotes,
                                   xhorse: entry.remotes.join(", "),
+                                  prox: entry.prox || false,
                                 };
                                 onAddToStock && onAddToStock(newProd);
                                 setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
@@ -3920,11 +3986,12 @@ function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIn
                                     type: "Xhorse",
                                     ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(),
                                     prix: 0,
-                                    categorie: "Stock",
+                                    categorie: "Xhorse",
                                     emoji: "🔑",
                                     image: keyPhoto || entry.image,
                                     remotes: entry.remotes,
                                     xhorse: entry.remotes.join(", "),
+                                    prox: entry.prox || false,
                                   };
                                   onAddToStock && onAddToStock(newProd);
                                   setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
@@ -4290,6 +4357,11 @@ function UrlProductImport({ onProductCreated, onClose }) {
         <div style={row}>
           <label style={lbl}>Lame</label>
           <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
+        </div>
+
+        <div style={row}>
+          <label style={lbl}>Pile</label>
+          <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
         </div>
 
         {/* Champ image */}
@@ -5472,22 +5544,29 @@ export default function App() {
             initialTab={xhorseTab ? "xhorse" : undefined}
             oeLinksOverrides={oeLinksOverrides}
             setOeLinksOverrides={setOeLinksOverrides}
+            onShowAddProduit={() => setShowUrlImport(true)}
             onAddToStock={function(vp) {
               var newProd = {
+                ...vp,
                 id: vp.id,
                 nom: vp.nom,
-                lame: vp.lame || "",
-                transpondeur: vp.transpondeur || "",
-                freq: vp.freq || "433 MHz",
+                lame: vp.lame || vp.blade || "",
+                transpondeur: vp.transpondeur || vp.transponder || "",
+                freq: vp.freq || vp.frequence || "433 MHz",
                 type: vp.type || "Clé aftermarket",
-                ref: vp.ref,
-                marque: vp.marque || vp.marqueVehicule || vp.lame || "",
-                modeles: vp.modeles || "",
-                prix: 0,
-                categorie: "Stock",
-                emoji: "🔑",
+                ref: vp.ref || "",
+                marque: vp.marque || vp.marqueVehicule || "",
+                modeles: vp.modeles || vp.vehiculesCompatibles || "",
+                prix: vp.prix || 0,
+                categorie: vp.categorie || "Aftermarket France",
+                emoji: vp.emoji || "🔑",
                 image: vp.image || null,
                 xhorse: vp.xhorse || null,
+                remotes: vp.remotes || null,
+                prox: vp.prox || false,
+                lien: vp.lien || "",
+                oeLinks: vp.oeLinks || [],
+                notes: vp.notes || "",
               };
               setProducts(function(prev) {
                 if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
