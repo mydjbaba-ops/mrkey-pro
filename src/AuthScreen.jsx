@@ -113,3 +113,41 @@ export default function AuthScreen({ onAuth }) {
     </div>
   );
 }
+
+export function ResetPasswordScreen() {
+  const [password, setPassword] = useState("");
+  const [msg, setMsg] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) setMsg({ type: "error", text: error.message });
+    else {
+      setMsg({ type: "success", text: "✅ Mot de passe mis à jour ! Redirection..." });
+      setTimeout(() => window.location.href = "/", 2000);
+    }
+    setLoading(false);
+  };
+
+  const inp = { width: "100%", boxSizing: "border-box", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 12, padding: "13px 14px", color: "#1a1d2e", fontSize: 14, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 10 };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#c8d0e8", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 40, marginBottom: 6 }}>🔑</div>
+          <div style={{ fontSize: 28, fontWeight: 900, color: "#1a1d2e" }}>MrKey Pro</div>
+          <div style={{ fontSize: 13, color: "#5a6585", marginTop: 4 }}>Nouveau mot de passe</div>
+        </div>
+        <div style={{ background: "#dde3f2", borderRadius: 20, padding: 24, border: "1px solid rgba(108,99,255,0.12)" }}>
+          {msg && <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, background: msg.type === "error" ? "rgba(255,71,87,0.1)" : "rgba(0,245,147,0.1)", color: msg.type === "error" ? "#ff4757" : "#00b87a", border: `1px solid ${msg.type === "error" ? "rgba(255,71,87,0.3)" : "rgba(0,245,147,0.3)"}` }}>{msg.text}</div>}
+          <input style={inp} type="password" placeholder="Nouveau mot de passe" value={password} onChange={e => setPassword(e.target.value)} />
+          <button onClick={handleReset} disabled={loading || !password} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", opacity: loading ? 0.6 : 1 }}>
+            {loading ? "⏳..." : "Enregistrer le mot de passe"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
