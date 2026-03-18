@@ -4587,11 +4587,22 @@ function UrlProductImport({ onProductCreated, onClose }) {
       });
       const data = await res.json();
       if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
+      // Détecte la marque depuis le nom si l'API renvoie "Autre" ou rien
+      const MARQUES_AUTO = ["Renault","Peugeot","Citroën","Volkswagen","BMW","Mercedes","Audi","Toyota",
+        "Ford","Nissan","Fiat","Seat","Skoda","Opel","Hyundai","Kia","Mazda","Mitsubishi","Subaru",
+        "Honda","Suzuki","Dacia","Alfa Romeo","Lancia","Porsche","Volvo","Jaguar","Land Rover",
+        "Jeep","Chrysler","Dodge","Chevrolet","Tesla","Lexus","Infiniti","Acura","Maserati",
+        "Ferrari","Lamborghini","Bentley","Rolls Royce","Aston Martin","Mini","Smart","DS"];
+      const nomPourDetection = (data.nom || "").toLowerCase();
+      let marqueDetectee = (data.marque && data.marque !== "Autre") ? data.marque : "";
+      if (!marqueDetectee) {
+        marqueDetectee = MARQUES_AUTO.find(m => nomPourDetection.includes(m.toLowerCase())) || "";
+      }
       setForm(prev => ({
         ...prev,
         nom: data.nom || prev.nom,
         ref: data.ref || prev.ref,
-        marque: data.marque || prev.marque,
+        marque: marqueDetectee || prev.marque,
         modeles: data.modeles || prev.modeles,
         prix: data.prix || prev.prix,
         type: data.type || prev.type,
@@ -4613,7 +4624,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
       id: "manuel-" + Date.now(),
       nom: form.nom.trim(),
       ref: form.ref.trim() || ("REF-" + Date.now().toString().slice(-6)),
-      marque: form.marque.trim() || "Autre",
+      marque: form.marque.trim(),
       modeles: form.modeles.trim(),
       prix: parseFloat(form.prix) || 0,
       categorie: "Aftermarket France",
@@ -4697,8 +4708,11 @@ function UrlProductImport({ onProductCreated, onClose }) {
             <input type="number" min="0" step="0.01" value={form.prix} onChange={e => set("prix", e.target.value)} placeholder="0.00" style={inp} />
           </div>
           <div style={row}>
-            <label style={lbl}>Marque véhicule</label>
-            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Renault" style={inp} />
+            <label style={{ ...lbl, color: (!form.marque || form.marque === "Autre") ? "#e8a020" : "#5a6585", fontWeight: (!form.marque || form.marque === "Autre") ? 800 : 600 }}>
+              Marque véhicule {(!form.marque || form.marque === "Autre") ? "⚠ à renseigner" : "✓"}
+            </label>
+            <input value={form.marque} onChange={e => set("marque", e.target.value)} placeholder="ex: Maserati, Renault…"
+              style={{ ...inp, border: (!form.marque || form.marque === "Autre") ? "2px solid #e8a020" : inp.border, background: (!form.marque || form.marque === "Autre") ? "rgba(232,160,32,0.08)" : inp.background }} />
           </div>
           <div style={row}>
             <label style={lbl}>Type</label>
@@ -4882,7 +4896,24 @@ useEffect(() => {
         if (all[INTERV_KEY])   setInterventions(all[INTERV_KEY]);
         if (all[DEVIS_KEY])    setDevis(all[DEVIS_KEY]);
         if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
-        if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
+        if (all[CUSTOM_AM_KEY]) {
+          // Auto-correction des marques "Autre" ou vides depuis le nom
+          const MARQUES_AUTO = ["Renault","Peugeot","Citroën","Volkswagen","BMW","Mercedes","Audi",
+            "Toyota","Ford","Nissan","Fiat","Seat","Skoda","Opel","Hyundai","Kia","Mazda",
+            "Mitsubishi","Subaru","Honda","Suzuki","Dacia","Alfa Romeo","Lancia","Porsche",
+            "Volvo","Jaguar","Land Rover","Jeep","Chrysler","Dodge","Chevrolet","Tesla",
+            "Lexus","Infiniti","Maserati","Ferrari","Lamborghini","Bentley","Mini","Smart","DS"];
+          const fixed = all[CUSTOM_AM_KEY].map(p => {
+            if (p.marque && p.marque !== "Autre") return p;
+            const nom = (p.nom || "").toLowerCase();
+            const detected = MARQUES_AUTO.find(m => nom.includes(m.toLowerCase()));
+            return detected ? { ...p, marque: detected } : p;
+          });
+          setCustomAftermarket(fixed);
+          // Sauvegarde si des corrections ont été faites
+          const hasChanges = fixed.some((p, i) => p.marque !== all[CUSTOM_AM_KEY][i].marque);
+          if (hasChanges) dbSet(user.id, CUSTOM_AM_KEY, fixed);
+        }
         if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
         setSyncing(false);
         setDataLoaded(true);
