@@ -4814,19 +4814,27 @@ const [syncing, setSyncing] = useState(false);
     return { totalRefs, okCount, alertCount, valeurStock, budgetCommande };
   }, [stock, lowStockProducts, products]);
 
-  // Auth
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+  // Persist stock to localStorage on every change
+// Auth
+useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setUser(session?.user ?? null);
+    setAuthReady(true);
+  });
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    if (!window.location.hash.includes("type=recovery")) {
       setUser(session?.user ?? null);
-      setAuthReady(true);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!window.location.hash.includes("type=recovery")) {
-        setUser(session?.user ?? null);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+    }
+  });
+  return () => subscription.unsubscribe();
+}, []);
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    if (!window.location.hash.includes("type=recovery")) {
+      setUser(session?.user ?? null);
+    }
+  });
+  return () => subscription.unsubscribe();
+}, []);
 
   // Charge les données depuis Supabase
   useEffect(() => {
@@ -4843,6 +4851,30 @@ const [syncing, setSyncing] = useState(false);
       if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
       setSyncing(false);
     });
+  }, [user]);
+
+  // Recharge les données quand l'onglet reprend le focus
+  useEffect(() => {
+    const reload = () => {
+      if (!user) return;
+      dbGetAll(user.id).then(all => {
+        if (all[PRODUCTS_KEY]) setProducts(all[PRODUCTS_KEY]);
+        if (all[STOCK_KEY])    setStock(all[STOCK_KEY]);
+        if (all[CLIENT_KEY])   setClients(all[CLIENT_KEY]);
+        if (all[INTERV_KEY])   setInterventions(all[INTERV_KEY]);
+        if (all[DEVIS_KEY])    setDevis(all[DEVIS_KEY]);
+        if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
+        if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
+        if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
+      });
+    };
+    const onVisibility = () => { if (document.visibilityState === "visible") reload(); };
+    window.addEventListener("focus", reload);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", reload);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [user]);
 
   // Persist vers Supabase
