@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { supabase, dbSet, dbGetAll } from "./src/supabase";
-import AuthScreen from "./src/AuthScreen";
+import AuthScreen, { ResetPasswordScreen } from "./src/AuthScreen";
 
 // ============================================================
 // ===== IMAGES INLINE SVG PAR MARQUE (pas de dépendance réseau)
@@ -5765,6 +5765,8 @@ const [syncing, setSyncing] = useState(false);
   };
 
   if (!authReady) return <div style={{ minHeight: "100vh", background: "#c8d0e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🔑</div>;
+  // Page reset mot de passe
+if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen />;
   if (!user) return <AuthScreen onAuth={setUser} />;
 
   return (
