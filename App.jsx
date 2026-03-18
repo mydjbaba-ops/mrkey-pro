@@ -4851,7 +4851,7 @@ useEffect(() => {
     });
   }, [user]);
 
-  // Recharge les données quand l'onglet reprend le focus + polling 30s
+  // Recharge les données quand l'onglet reprend le focus
   useEffect(() => {
     const reload = () => {
       if (!user) return;
@@ -4869,11 +4869,9 @@ useEffect(() => {
     const onVisibility = () => { if (document.visibilityState === "visible") reload(); };
     window.addEventListener("focus", reload);
     document.addEventListener("visibilitychange", onVisibility);
-    const interval = setInterval(reload, 30000);
     return () => {
       window.removeEventListener("focus", reload);
       document.removeEventListener("visibilitychange", onVisibility);
-      clearInterval(interval);
     };
   }, [user]);
 
