@@ -4191,6 +4191,41 @@ const FALLBACK_IMG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http:
 // ============================================================
 // =================== AFTERMARKET TAB =======================
 // ============================================================
+function DragScrollTabs({ filterMarque, setFilterMarque, marques }) {
+  const tabsRef = React.useRef(null);
+  const dragging = React.useRef(false);
+  const startX = React.useRef(0);
+  const scrollLeft = React.useRef(0);
+  const onMouseDown = (e) => {
+    dragging.current = true;
+    startX.current = e.pageX - tabsRef.current.offsetLeft;
+    scrollLeft.current = tabsRef.current.scrollLeft;
+    tabsRef.current.style.cursor = "grabbing";
+  };
+  const onMouseUp = () => { dragging.current = false; if (tabsRef.current) tabsRef.current.style.cursor = "grab"; };
+  const onMouseMove = (e) => {
+    if (!dragging.current) return;
+    e.preventDefault();
+    const x = e.pageX - tabsRef.current.offsetLeft;
+    tabsRef.current.scrollLeft = scrollLeft.current - (x - startX.current);
+  };
+  return (
+    <div ref={tabsRef} onMouseDown={onMouseDown} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onMouseMove={onMouseMove}
+      style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none", marginBottom: 10, cursor: "grab", userSelect: "none" }}>
+      <button onClick={() => setFilterMarque("")}
+        style={{ whiteSpace: "nowrap", padding: "6px 14px", borderRadius: 20, border: `1px solid ${!filterMarque ? "#6c63ff" : "rgba(108,99,255,0.2)"}`, background: !filterMarque ? "#6c63ff" : "transparent", color: !filterMarque ? "#fff" : "#3d4870", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+        Toutes
+      </button>
+      {marques.map(m => (
+        <button key={m} onClick={() => setFilterMarque(m === filterMarque ? "" : m)}
+          style={{ whiteSpace: "nowrap", padding: "6px 14px", borderRadius: 20, border: `1px solid ${filterMarque === m ? "#6c63ff" : "rgba(108,99,255,0.2)"}`, background: filterMarque === m ? "#6c63ff" : "transparent", color: filterMarque === m ? "#fff" : "#3d4870", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+          {m}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlImport, oeLinksOverrides, S, customItems = [], onDeleteCustom }) {
   const [search, setSearch] = React.useState("");
   const [filterMarque, setFilterMarque] = React.useState("");
@@ -4219,6 +4254,20 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
       return true;
     });
   }, [search, filterMarque]);
+
+  const filteredCustom = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return customItems.filter(p => {
+      if (filterMarque && p.marque !== filterMarque) return false;
+      if (q) return (
+        (p.nom || '').toLowerCase().includes(q) ||
+        (p.ref || '').toLowerCase().includes(q) ||
+        (p.marque || '').toLowerCase().includes(q) ||
+        (p.modeles || '').toLowerCase().includes(q)
+      );
+      return true;
+    });
+  }, [customItems, search, filterMarque]);
 
   const isInStock = (ref) => products.some(p => p.ref === ref);
 
@@ -4273,29 +4322,18 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
           {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#5a6585", fontSize: 16 }}>✕</button>}
         </div>
 
-        {/* Filtre marque */}
-        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none", marginBottom: 10 }}>
-          <button onClick={() => setFilterMarque("")}
-            style={{ whiteSpace: "nowrap", padding: "6px 14px", borderRadius: 20, border: `1px solid ${!filterMarque ? "#6c63ff" : "rgba(108,99,255,0.2)"}`, background: !filterMarque ? "#6c63ff" : "transparent", color: !filterMarque ? "#fff" : "#3d4870", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-            Toutes
-          </button>
-          {marques.map(m => (
-            <button key={m} onClick={() => setFilterMarque(m === filterMarque ? "" : m)}
-              style={{ whiteSpace: "nowrap", padding: "6px 14px", borderRadius: 20, border: `1px solid ${filterMarque === m ? "#6c63ff" : "rgba(108,99,255,0.2)"}`, background: filterMarque === m ? "#6c63ff" : "transparent", color: filterMarque === m ? "#fff" : "#3d4870", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-              {m}
-            </button>
-          ))}
-        </div>
+        {/* Filtre marque — drag scroll PC + touch mobile */}
+        <DragScrollTabs filterMarque={filterMarque} setFilterMarque={setFilterMarque} marques={marques} />
 
         <div style={{ fontSize: 11, color: "#8890aa", marginBottom: 8 }}>{filtered.length} référence{filtered.length !== 1 ? "s" : ""} catalogue</div>
 
         {/* ── Fiches ajoutées manuellement (par URL) ── */}
-        {customItems.length > 0 && (
+        {filteredCustom.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#6c63ff", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
               🔗 Ajoutés par URL ({customItems.length})
             </div>
-            {customItems.map(p => {
+            {filteredCustom.map(p => {
               const inStock = products.some(x => x.id === p.id);
               const isOpen = openCustomId === p.id;
               // Champs techniques pour le panneau déplié
