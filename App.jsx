@@ -4851,7 +4851,7 @@ useEffect(() => {
     });
   }, [user]);
 
-  // Recharge les données quand l'onglet reprend le focus
+  // Recharge les données quand l'onglet reprend le focus + polling 30s
   useEffect(() => {
     const reload = () => {
       if (!user) return;
