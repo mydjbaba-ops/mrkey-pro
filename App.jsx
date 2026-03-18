@@ -5769,7 +5769,7 @@ useEffect(() => {
 
   if (!authReady) return <div style={{ minHeight: "100vh", background: "#c8d0e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🔑</div>;
   // Page reset mot de passe
-if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen />;
+if (window.location.hash.includes("type=recovery") || window.location.href.includes("type=recovery")) return <ResetPasswordScreen />;
   if (!user) return <AuthScreen onAuth={setUser} />;
 
   return (
