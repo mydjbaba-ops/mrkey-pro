@@ -5807,17 +5807,20 @@ if (window.location.hash.includes("type=recovery") || window.location.href.inclu
         )}
         {/* HEADER */}
         {page !== "detail" && (
-          <div style={S.header}>
-            <div style={S.logo}>
-              <div style={S.logoIcon}><KeyIcon /></div>
-              <div style={{ flex: 1 }}>
-                <div style={S.logoText}>MrKey <span style={{ background: "linear-gradient(90deg,#6c63ff,#00d4ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Pro</span></div>
-                <div style={S.logoSub}>{products.length} </div>
-              </div>
-
-            </div>
-          </div>
-        )}
+  <div style={S.header}>
+    <div style={S.logo}>
+      <div style={S.logoIcon}><KeyIcon /></div>
+      <div style={{ flex: 1 }}>
+        <div style={S.logoText}>MrKey <span style={{ background: "linear-gradient(90deg,#6c63ff,#00d4ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Pro</span></div>
+        <div style={S.logoSub}>{products.length} </div>
+      </div>
+      <button onClick={async () => { await supabase.auth.signOut(); setUser(null); }}
+        style={{ background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "6px 12px", color: "#ff4757", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+        🔓 Déco
+      </button>
+    </div>
+  </div>
+)}
         {/* BOTTOM NAV BAR */}
         {page !== "detail" && page !== "clientDetail" && (
           <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "rgba(210,218,240,0.98)", borderTop: "1px solid rgba(108,99,255,0.15)", zIndex: 200, display: "flex", padding: "10px 6px 18px", gap: 0, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}>
