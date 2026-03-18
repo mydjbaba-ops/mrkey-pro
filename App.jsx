@@ -4197,7 +4197,11 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
   const [openRef, setOpenRef] = React.useState(null);
   const [openCustomId, setOpenCustomId] = React.useState(null);
 
-  const marques = React.useMemo(() => [...new Set(SILCA_DB.map(e => e.marque))].sort(), []);
+  const marques = React.useMemo(() => {
+    const fromSilca = SILCA_DB.map(e => e.marque);
+    const fromCustom = customItems.filter(p => p.marque).map(p => p.marque);
+    return [...new Set([...fromSilca, ...fromCustom])].sort();
+  }, [customItems]);
 
   const filtered = React.useMemo(() => {
     const seen = new Set();
@@ -4338,16 +4342,10 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                           color: inStock ? "#00b87a" : "#fff" }}>
                         {inStock ? "📦\nStock" : "+ Ajouter\nau stock"}
                       </button>
-                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        {onDeleteCustom && (
-                          <button onClick={() => onDeleteCustom(p.id)}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "#ff4757", fontSize: 11, padding: "2px 4px" }}>🗑</button>
-                        )}
-                        <button onClick={() => setOpenCustomId(isOpen ? null : p.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8890aa", padding: "2px 4px", display: "flex", alignItems: "center", transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                      </div>
+                      <button onClick={() => setOpenCustomId(isOpen ? null : p.id)}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "#8890aa", padding: "2px 4px", display: "flex", alignItems: "center", transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
                     </div>
                   </div>
 
@@ -4396,6 +4394,13 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                           style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 10, fontSize: 11, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 20, padding: "5px 12px", textDecoration: "none" }}>
                           🔗 Voir la page fournisseur
                         </a>
+                      )}
+                      {/* Bouton supprimer */}
+                      {onDeleteCustom && (
+                        <button onClick={() => onDeleteCustom(p.id)}
+                          style={{ marginTop: 12, width: "100%", padding: "9px", borderRadius: 10, border: "1px solid rgba(255,71,87,0.25)", background: "rgba(255,71,87,0.06)", color: "#ff4757", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                          🗑 Supprimer cette fiche
+                        </button>
                       )}
                     </div>
                   )}
