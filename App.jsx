@@ -1,5 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { supabase, dbSet, dbGetAll } from "./src/supabase";
+import AuthScreen from "./src/AuthScreen";
 
 // ============================================================
 // ===== IMAGES INLINE SVG PAR MARQUE (pas de dépendance réseau)
@@ -4726,6 +4728,9 @@ function UrlProductImport({ onProductCreated, onClose }) {
 // ========================= APP ==============================
 // ============================================================
 export default function App() {
+  const [user, setUser] = useState(null);
+const [authReady, setAuthReady] = useState(false);
+const [syncing, setSyncing] = useState(false);
   const [page, setPage] = useState("home");
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -4810,18 +4815,44 @@ export default function App() {
   }, [stock, lowStockProducts, products]);
 
   // Persist stock to localStorage on every change
+// Auth
   useEffect(() => {
-    try { localStorage.setItem(STOCK_KEY, JSON.stringify(stock)); } catch (e) {}
-  }, [stock]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthReady(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Charge les données depuis Supabase
   useEffect(() => {
-    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products)); } catch (e) {}
-  }, [products]);
-  useEffect(() => { try { localStorage.setItem(CLIENT_KEY, JSON.stringify(clients)); } catch (e) {} }, [clients]);
-  useEffect(() => { try { localStorage.setItem(DEVIS_KEY, JSON.stringify(devis)); } catch (e) {} }, [devis]);
-  useEffect(() => { try { localStorage.setItem(INTERV_KEY, JSON.stringify(interventions)); } catch (e) {} }, [interventions]);
-  useEffect(() => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {} }, [settings]);
-  useEffect(() => { try { localStorage.setItem(OE_LINKS_KEY, JSON.stringify(oeLinksOverrides)); } catch (e) {} }, [oeLinksOverrides]);
-  useEffect(() => { try { localStorage.setItem(CUSTOM_AM_KEY, JSON.stringify(customAftermarket)); } catch (e) {} }, [customAftermarket]);
+    if (!user) return;
+    setSyncing(true);
+    dbGetAll(user.id).then(all => {
+      if (all[PRODUCTS_KEY]) setProducts(all[PRODUCTS_KEY]);
+      if (all[STOCK_KEY])    setStock(all[STOCK_KEY]);
+      if (all[CLIENT_KEY])   setClients(all[CLIENT_KEY]);
+      if (all[INTERV_KEY])   setInterventions(all[INTERV_KEY]);
+      if (all[DEVIS_KEY])    setDevis(all[DEVIS_KEY]);
+      if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
+      if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
+      if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
+      setSyncing(false);
+    });
+  }, [user]);
+
+  // Persist vers Supabase
+  useEffect(() => { if (user) dbSet(user.id, STOCK_KEY, stock); }, [stock, user]);
+  useEffect(() => { if (user) dbSet(user.id, PRODUCTS_KEY, products); }, [products, user]);
+  useEffect(() => { if (user) dbSet(user.id, CLIENT_KEY, clients); }, [clients, user]);
+  useEffect(() => { if (user) dbSet(user.id, DEVIS_KEY, devis); }, [devis, user]);
+  useEffect(() => { if (user) dbSet(user.id, INTERV_KEY, interventions); }, [interventions, user]);
+  useEffect(() => { if (user) dbSet(user.id, SETTINGS_KEY, settings); }, [settings, user]);
+  useEffect(() => { if (user) dbSet(user.id, OE_LINKS_KEY, oeLinksOverrides); }, [oeLinksOverrides, user]);
+  useEffect(() => { if (user) dbSet(user.id, CUSTOM_AM_KEY, customAftermarket); }, [customAftermarket, user]);
 
   // Badge color per category
   const catColor = (cat) => {
@@ -5732,6 +5763,9 @@ export default function App() {
       S={S}
     />;
   };
+
+  if (!authReady) return <div style={{ minHeight: "100vh", background: "#c8d0e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40 }}>🔑</div>;
+  if (!user) return <AuthScreen onAuth={setUser} />;
 
   return (
     <>
