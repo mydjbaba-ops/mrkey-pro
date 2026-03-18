@@ -4735,8 +4735,8 @@ export default function App() {
   const [page, setPage] = useState("home");
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [products, setProducts] = useState(loadProducts);
-  const [stock, setStock] = useState(initStock);
+  const [products, setProducts] = useState([]);
+  const [stock, setStock] = useState({});
   const [showHistory, setShowHistory] = useState(null);
 
   const [clients, setClients] = useState(() => { try { const s = localStorage.getItem(CLIENT_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
@@ -4836,16 +4836,18 @@ useEffect(() => {
     setDataLoaded(false);
     setSyncing(true);
     dbGetAll(user.id).then(all => {
-      if (all[PRODUCTS_KEY]) setProducts(all[PRODUCTS_KEY]);
-      if (all[STOCK_KEY])    setStock(all[STOCK_KEY]);
-      if (all[CLIENT_KEY])   setClients(all[CLIENT_KEY]);
-      if (all[INTERV_KEY])   setInterventions(all[INTERV_KEY]);
-      if (all[DEVIS_KEY])    setDevis(all[DEVIS_KEY]);
-      if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
-      if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
-      if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
-      setSyncing(false);
-      setDataLoaded(true);
+      React.startTransition(() => {
+        if (all[PRODUCTS_KEY]) setProducts(all[PRODUCTS_KEY]);
+        if (all[STOCK_KEY])    setStock(all[STOCK_KEY]);
+        if (all[CLIENT_KEY])   setClients(all[CLIENT_KEY]);
+        if (all[INTERV_KEY])   setInterventions(all[INTERV_KEY]);
+        if (all[DEVIS_KEY])    setDevis(all[DEVIS_KEY]);
+        if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
+        if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
+        if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
+        setSyncing(false);
+        setDataLoaded(true);
+      });
     });
   }, [user]);
 
