@@ -4729,8 +4729,9 @@ function UrlProductImport({ onProductCreated, onClose }) {
 // ============================================================
 export default function App() {
   const [user, setUser] = useState(null);
-const [authReady, setAuthReady] = useState(false);
-const [syncing, setSyncing] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [page, setPage] = useState("home");
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -4839,6 +4840,7 @@ useEffect(() => {
   // Charge les données depuis Supabase
   useEffect(() => {
     if (!user) return;
+    setDataLoaded(false);
     setSyncing(true);
     dbGetAll(user.id).then(all => {
       if (all[PRODUCTS_KEY]) setProducts(all[PRODUCTS_KEY]);
@@ -4850,6 +4852,7 @@ useEffect(() => {
       if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
       if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
       setSyncing(false);
+      setDataLoaded(true);
     });
   }, [user]);
 
@@ -4878,14 +4881,14 @@ useEffect(() => {
   }, [user]);
 
   // Persist vers Supabase
-  useEffect(() => { if (user) dbSet(user.id, STOCK_KEY, stock); }, [stock, user]);
-  useEffect(() => { if (user) dbSet(user.id, PRODUCTS_KEY, products); }, [products, user]);
-  useEffect(() => { if (user) dbSet(user.id, CLIENT_KEY, clients); }, [clients, user]);
-  useEffect(() => { if (user) dbSet(user.id, DEVIS_KEY, devis); }, [devis, user]);
-  useEffect(() => { if (user) dbSet(user.id, INTERV_KEY, interventions); }, [interventions, user]);
-  useEffect(() => { if (user) dbSet(user.id, SETTINGS_KEY, settings); }, [settings, user]);
-  useEffect(() => { if (user) dbSet(user.id, OE_LINKS_KEY, oeLinksOverrides); }, [oeLinksOverrides, user]);
-  useEffect(() => { if (user) dbSet(user.id, CUSTOM_AM_KEY, customAftermarket); }, [customAftermarket, user]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, STOCK_KEY, stock); }, [stock, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, PRODUCTS_KEY, products); }, [products, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, CLIENT_KEY, clients); }, [clients, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, DEVIS_KEY, devis); }, [devis, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, INTERV_KEY, interventions); }, [interventions, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, SETTINGS_KEY, settings); }, [settings, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, OE_LINKS_KEY, oeLinksOverrides); }, [oeLinksOverrides, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, CUSTOM_AM_KEY, customAftermarket); }, [customAftermarket, user, dataLoaded]);
 
   // Badge color per category
   const catColor = (cat) => {
