@@ -4564,12 +4564,13 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
   );
 }
 
-function UrlProductImport({ onProductCreated, onClose }) {
+function UrlProductImport({ onProductCreated, onClose, existingProducts = [], onUpdateExisting }) {
   const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
   const [form, setForm] = React.useState(empty);
   const [loading, setLoading] = React.useState(false);
   const [analysed, setAnalysed] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
+  const [doublon, setDoublon] = React.useState(null); // { id, nom, champsMisAJour }
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -4583,10 +4584,17 @@ function UrlProductImport({ onProductCreated, onClose }) {
       const res = await fetch("/api/analyse-produit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, existingProducts }),
       });
       const data = await res.json();
       if (data.erreur) { setErrorMsg(data.erreur); setLoading(false); return; }
+      // Gestion doublon
+      if (data.statut === "doublon") {
+        setDoublon({ id: data.doublonId, nom: data.doublonNom, champsMisAJour: data.champsMisAJour, data });
+        setLoading(false);
+        return;
+      }
+      setDoublon(null);
       // Détecte la marque depuis le nom si l'API renvoie "Autre" ou rien
       const MARQUES_AUTO = ["Renault","Peugeot","Citroën","Volkswagen","BMW","Mercedes","Audi","Toyota",
         "Ford","Nissan","Fiat","Seat","Skoda","Opel","Hyundai","Kia","Mazda","Mitsubishi","Subaru",
@@ -4660,6 +4668,29 @@ function UrlProductImport({ onProductCreated, onClose }) {
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#5a6585", fontSize: 22, cursor: "pointer", padding: 4, lineHeight: 1 }}>✕</button>
         </div>
+
+        {/* Alerte doublon */}
+        {doublon && (
+          <div style={{ background: "rgba(255,167,38,0.1)", border: "2px solid rgba(255,167,38,0.4)", borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#e8a020", marginBottom: 6 }}>⚠ Produit déjà dans le catalogue</div>
+            <div style={{ fontSize: 12, color: "#1a1d2e", marginBottom: 10 }}>
+              <b>{doublon.nom}</b> existe déjà.
+              {doublon.champsMisAJour.length > 0 && <span> On peut compléter : <b>{doublon.champsMisAJour.join(", ")}</b></span>}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {doublon.champsMisAJour.length > 0 && onUpdateExisting && (
+                <button onClick={() => { onUpdateExisting(doublon.id, doublon.data); setDoublon(null); onClose(); }}
+                  style={{ flex: 2, padding: "9px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  ✅ Compléter les données manquantes
+                </button>
+              )}
+              <button onClick={() => setDoublon(null)}
+                style={{ flex: 1, padding: "9px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+                Ignorer
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* URL + bouton analyser */}
         <div style={{ background: "linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,212,255,0.06))", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16, marginTop: 10 }}>
@@ -6150,6 +6181,20 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
         )}
         {showUrlImport && (
           <UrlProductImport
+            existingProducts={customAftermarket}
+            onUpdateExisting={(id, data) => {
+              setCustomAftermarket(prev => prev.map(p => p.id === id ? {
+                ...p,
+                freq: data.freq || p.freq,
+                transpondeur: data.transpondeur || p.transpondeur,
+                lame: data.lame || p.lame,
+                pile: data.pile || p.pile,
+                modeles: data.modeles || p.modeles,
+                image: data.image || p.image,
+                marque: (data.marque && data.marque !== "Autre") ? data.marque : p.marque,
+              } : p));
+              showToast("✅ Fiche complétée !");
+            }}
             onProductCreated={(newProd) => {
               // Ajoute dans le catalogue Aftermarket custom (visible dans l'onglet)
               setCustomAftermarket(prev => [newProd, ...prev]);
