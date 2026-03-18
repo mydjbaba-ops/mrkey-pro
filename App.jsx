@@ -4782,13 +4782,11 @@ export default function App() {
   const [stock, setStock] = useState({});
   const [showHistory, setShowHistory] = useState(null);
 
-  const [clients, setClients] = useState(() => { try { const s = localStorage.getItem(CLIENT_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
-  const [interventions, setInterventions] = useState(() => { try { const s = localStorage.getItem(INTERV_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
-  const [settings, setSettings] = useState(() => { try { const s = localStorage.getItem(SETTINGS_KEY); return s ? JSON.parse(s) : { nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" }; } catch { return { nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" }; } });
+  const [clients, setClients] = useState([]);
+  const [interventions, setInterventions] = useState([]);
+  const [settings, setSettings] = useState({ nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" });
   // oeLinksOverrides : { [ref]: [{label, url}, ...] } — remplace/complète les oeLinks du catalogue
-  const [oeLinksOverrides, setOeLinksOverrides] = useState(() => {
-    try { const s = localStorage.getItem(OE_LINKS_KEY); return s ? JSON.parse(s) : {}; } catch { return {}; }
-  });
+  const [oeLinksOverrides, setOeLinksOverrides] = useState({});
   const [oeOpen, setOeOpen] = useState(false);
   const [statsTab, setStatsTab] = useState("stats");
   const [selectedClient, setSelectedClient] = useState(null);
@@ -4798,16 +4796,14 @@ export default function App() {
   const [statPeriod, setStatPeriod] = useState("mois");
   const [settingsDraft, setSettingsDraft] = useState(null);
   const [factureUrl, setFactureUrl] = useState(null);
-  const [devis, setDevis] = useState(() => { try { const s = localStorage.getItem(DEVIS_KEY); return s ? JSON.parse(s) : []; } catch { return []; } });
+  const [devis, setDevis] = useState([]);
   const [showDevisForm, setShowDevisForm] = useState(false);
   const [selectedDevis, setSelectedDevis] = useState(null);
   const [intervFormProduct, setIntervFormProduct] = useState(null);
   const [toast, setToast] = useState(null);
 
   const [xhorseTab, setXhorseTab] = useState(false);
-  const [customAftermarket, setCustomAftermarket] = useState(() => {
-    try { const s = localStorage.getItem(CUSTOM_AM_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
-  });
+  const [customAftermarket, setCustomAftermarket] = useState([]);
   const [showUrlImport, setShowUrlImport] = useState(false);
 
   function showToast(msg, type = "success") {
