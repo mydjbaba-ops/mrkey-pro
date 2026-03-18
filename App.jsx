@@ -5842,6 +5842,25 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
         <div style={S.logoText}>MrKey <span style={{ background: "linear-gradient(90deg,#6c63ff,#00d4ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Pro</span></div>
         <div style={S.logoSub}>{products.length} </div>
       </div>
+      <button onClick={async () => {
+          setSyncing(true);
+          const all = await dbGetAll(user.id);
+          React.startTransition(() => {
+            if (all[PRODUCTS_KEY]) setProducts(all[PRODUCTS_KEY]);
+            if (all[STOCK_KEY])    setStock(all[STOCK_KEY]);
+            if (all[CLIENT_KEY])   setClients(all[CLIENT_KEY]);
+            if (all[INTERV_KEY])   setInterventions(all[INTERV_KEY]);
+            if (all[DEVIS_KEY])    setDevis(all[DEVIS_KEY]);
+            if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
+            if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
+            if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
+            setSyncing(false);
+          });
+          showToast("✅ Données actualisées !");
+        }}
+        style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 10, padding: "6px 12px", color: "#6c63ff", fontSize: 11, fontWeight: 700, cursor: "pointer", marginRight: 6 }}>
+        {syncing ? "⏳" : "🔄"}
+      </button>
       <button onClick={async () => { await supabase.auth.signOut(); setUser(null); }}
         style={{ background: "rgba(255,71,87,0.08)", border: "1px solid rgba(255,71,87,0.2)", borderRadius: 10, padding: "6px 12px", color: "#ff4757", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
         🔓 Déco
