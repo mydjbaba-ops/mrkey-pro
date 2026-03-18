@@ -4817,17 +4817,11 @@ const [syncing, setSyncing] = useState(false);
   // Persist stock to localStorage on every change
 // Auth
 useEffect(() => {
+  const isRecovery = window.location.hash.includes("type=recovery");
   supabase.auth.getSession().then(({ data: { session } }) => {
-    setUser(session?.user ?? null);
+    setUser(isRecovery ? null : (session?.user ?? null));
     setAuthReady(true);
   });
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-    if (!window.location.hash.includes("type=recovery")) {
-      setUser(session?.user ?? null);
-    }
-  });
-  return () => subscription.unsubscribe();
-}, []);
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
     if (!window.location.hash.includes("type=recovery")) {
       setUser(session?.user ?? null);
