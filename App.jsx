@@ -2,6 +2,9 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { supabase, dbSet, dbGetAll } from "./src/supabase";
 import AuthScreen, { ResetPasswordScreen } from "./src/AuthScreen";
+import { KEY_IMAGES } from "./keyImages.js";
+import { SILCA_IMGS } from "./silcaImages.js";
+import { XHORSE_IMAGES } from "./xhorseImages.js";
 
 
 
@@ -3033,8 +3036,6 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
         {page === "home" && renderHome()}
         {page === "stock" && renderStock()}
         {page === "aftermarket" && renderAftermarket()}
-            onClose={function() { setShowIntervForm(false); setIntervFormProduct(null); }} />
-        )}
         {page === "detail" && selectedProduct && (
           <DetailPage
             key={selectedProduct.id}
