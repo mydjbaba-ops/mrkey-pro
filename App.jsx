@@ -1457,7 +1457,8 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "12px 14px 0" }}>
                           {[
                             p.ref           && ["Référence",      p.ref,                    "#a78bfa"],
-                            p.transpondeur  && ["Transpondeur",   p.transpondeur + (p.pcf ? ` (${p.pcf})` : ""), "#6c63ff"],
+                            p.transpondeur  && ["Transpondeur",   p.transpondeur, "#6c63ff"],
+                            p.id_transpondeur && ["ID transpondeur", p.id_transpondeur, "#a78bfa"],
                             p.freq          && ["Fréquence",      p.freq,                   "#fff"],
                             p.lame          && ["Lame",           p.lame,                   "#fff"],
                             p.pile          && ["Batterie",       p.pile,                   "#fff"],
@@ -1769,7 +1770,7 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 }
 
 function UrlProductImport({ onProductCreated, onClose }) {
-  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
+  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", id_transpondeur: "", lame: "", lien: "", lien_achat: "" };
   const [form, setForm] = React.useState(empty);
   const [loading, setLoading] = React.useState(false);
   const [analysed, setAnalysed] = React.useState(false);
@@ -1801,7 +1802,9 @@ function UrlProductImport({ onProductCreated, onClose }) {
         type: data.type || prev.type,
         freq: data.freq || prev.freq,
         transpondeur: data.transpondeur || prev.transpondeur,
+        id_transpondeur: data.id_transpondeur || data.transpondeur || prev.id_transpondeur,
         lame: data.lame || prev.lame,
+        pile: data.pile || prev.pile,
         image: data.image || prev.image || "",
       }));
       setAnalysed(true);
@@ -1828,7 +1831,11 @@ function UrlProductImport({ onProductCreated, onClose }) {
       emoji: "🔑",
       image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
-      oeLinks: form.lien.trim() ? [{ label: "Voir la page produit", url: form.lien.trim() }] : [],
+      lien_achat: (form.lien_achat || "").trim(),
+      id_transpondeur: (form.id_transpondeur || "").trim(),
+      oeLinks: (form.lien_achat || "").trim()
+        ? [{ label: "Acheter chez MK3", url: form.lien_achat.trim() }]
+        : form.lien.trim() ? [{ label: "Voir la page produit", url: form.lien.trim() }] : [],
     };
     onProductCreated(newProd);
   };
@@ -1915,8 +1922,12 @@ function UrlProductImport({ onProductCreated, onClose }) {
             <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433MHz" style={inp} />
           </div>
           <div style={row}>
-            <label style={lbl}>Transpondeur</label>
-            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: ID46" style={inp} />
+            <label style={lbl}>Transpondeur (PCF)</label>
+            <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: PCF7945" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>ID transpondeur</label>
+            <input value={form.id_transpondeur || ""} onChange={e => set("id_transpondeur", e.target.value)} placeholder="ex: ID46, ID47, ID4A" style={inp} />
           </div>
         </div>
 
@@ -1933,6 +1944,11 @@ function UrlProductImport({ onProductCreated, onClose }) {
         <div style={row}>
           <label style={lbl}>Pile</label>
           <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
+        </div>
+
+        <div style={row}>
+          <label style={lbl}>🛒 Lien d'achat MK3</label>
+          <input value={form.lien_achat || ""} onChange={e => set("lien_achat", e.target.value)} placeholder="https://mk3.fr/produit/..." style={inp} inputMode="url" />
         </div>
 
         {/* Champ image */}
