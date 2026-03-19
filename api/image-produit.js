@@ -3,15 +3,60 @@
 
 import sharp from "sharp";
 
+// Rate limiting: simple in-memory tracker
+const rateLimiter = new Map();
+const RATE_LIMIT_WINDOW = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 20; // max requests per window
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimiter.get(ip);
+  if (!entry || now - entry.start > RATE_LIMIT_WINDOW) {
+    rateLimiter.set(ip, { start: now, count: 1 });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+// URL validation
+function isValidUrl(str) {
+  try {
+    const u = new URL(str);
+    return ["http:", "https:"].includes(u.protocol) && u.hostname.length > 0;
+  } catch { return false; }
+}
+
 export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+
   if (req.method !== "POST") return res.status(405).json({ erreur: "Méthode non autorisée" });
+
+  // Rate limiting
+  const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ erreur: "Trop de requêtes — réessaie dans 1 minute" });
+  }
 
   const { url } = req.body || {};
   if (!url) return res.status(400).json({ erreur: "URL manquante" });
 
+  // Validate URL
+  if (typeof url !== "string" || url.length > 2048 || !isValidUrl(url)) {
+    return res.status(400).json({ erreur: "URL invalide" });
+  }
+
   try {
     // 1. Récupère le HTML de la page pour trouver l'image
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     const pageRes = await fetch(url, {
+      signal: controller.signal,
       headers: {
         "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15",
         "Accept": "text/html,application/xhtml+xml",

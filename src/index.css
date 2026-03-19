@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6c63ff;
+  --color-primary-light: #9d97ff;
+  --color-primary-dark: #4f46e5;
+  --color-accent: #00d4ff;
+  --color-success: #00f593;
+  --color-success-dark: #00b87a;
+  --color-danger: #ff4757;
+  --color-warning: #ffa726;
+  --color-surface: #dde3f5;
+  --color-surface-elevated: #e8edf8;
+  --color-surface-sunken: #c8d0e8;
+  --color-text-primary: #1a1d2e;
+  --color-text-secondary: #5a6585;
+  --color-text-muted: #8890aa;
+  --color-border: rgba(108, 99, 255, 0.12);
+  --color-border-strong: rgba(108, 99, 255, 0.25);
+  --color-silca-red: #cc0000;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-surface font-sans text-text-primary antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  input::placeholder {
+    @apply text-text-muted;
+  }
+
+  input {
+    caret-color: var(--color-primary);
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  }
+  .gradient-danger {
+    background: linear-gradient(135deg, #ff6b9d, #ffa726);
+  }
+  .gradient-success {
+    background: linear-gradient(135deg, var(--color-success), var(--color-accent));
+  }
+  .gradient-silca {
+    background: linear-gradient(135deg, #cc0000, #ff5050);
+  }
+  .gradient-text {
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glass {
+    @apply bg-surface-sunken/95 backdrop-blur-xl;
+  }
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/40;
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.3s ease both;
+}
