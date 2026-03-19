@@ -1497,58 +1497,70 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
           return (
             <div key={entry.ref} style={{ background: "#e8edf8", borderRadius: 16, marginBottom: 8, border: `1px solid ${isOpen ? "rgba(108,99,255,0.3)" : inStock ? "rgba(0,245,147,0.3)" : "rgba(108,99,255,0.12)"}`, overflow: "hidden", transition: "border-color 0.15s" }}>
 
-              {/* ── Ligne principale (inchangée) ── */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px 10px 10px" }}>
-
-                {/* Photo — cliquable pour expand */}
-                <div onClick={() => setOpenRef(isOpen ? null : entry.ref)}
-                  style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "#c8d0e8", border: "1px solid rgba(108,99,255,0.1)", cursor: "pointer" }}>
-                  <img src={photo} alt={entry.ref}
-                    onError={e => { e.target.src = getSilcaSVG(entry.blade); }}
-                    style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                </div>
-
-                {/* Infos — cliquables pour expand */}
-                <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setOpenRef(isOpen ? null : entry.ref)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginBottom: 3 }}>
-                    <span style={{ fontSize: 11, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff5050)", padding: "2px 8px", borderRadius: 5 }}>{entry.ref}</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: TCOL[entry.type], background: TCOL[entry.type] + "18", border: "1px solid " + TCOL[entry.type] + "33", padding: "1px 6px", borderRadius: 4 }}>{TLBL[entry.type]}</span>
-                    {inStock && <span style={{ fontSize: 9, fontWeight: 800, color: "#00b87a", background: "rgba(0,245,147,0.12)", border: "1px solid rgba(0,245,147,0.3)", padding: "1px 6px", borderRadius: 4 }}>✓ STOCK</span>}
-                  </div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1d2e", lineHeight: 1.4, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {apps.map(a => `${a.make} ${a.model}`).join(" · ")}{entry.applications.length > 3 ? ` +${entry.applications.length - 3}` : ""}
-                  </div>
-                  <div style={{ fontSize: 10, color: "#8890aa" }}>Lame <b style={{ color: "#5a6080" }}>{entry.blade}</b> · {entry.freq}</div>
-                  {oeLinks.length > 0 && (
-                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
-                      {oeLinks.map((lnk, li) => (
-                        <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          style={{ fontSize: 10, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 6, padding: "2px 7px", textDecoration: "none" }}>
-                          🔗 {lnk.label}
-                        </a>
-                      ))}
+              {/* ── CARD PREMIUM TERRAIN ── */}
+              {(() => {
+                const _trans = (entry.transponder || "").toUpperCase();
+                const _isAES = _trans.includes("AES") || _trans.includes("PCF7961") || _trans.includes("HITAG PRO") || _trans.includes("ID49") || _trans.includes("ID4A");
+                const _isBSI = _trans.includes("ID88") || _trans.includes("ID50") || ["BMW","Audi","Mercedes"].includes(entry.marque);
+                const _isRare = entry.applications.length <= 1;
+                const _isML = entry.type === "P";
+                const _diff = _isAES ? "Expert" : _isBSI ? "Avancé" : "Standard";
+                const _diffC = _isAES ? "#ff4757" : _isBSI ? "#e8a020" : "#00b87a";
+                return (
+                  <div style={{ display:"flex", alignItems:"stretch", gap:0, cursor:"pointer" }} onClick={() => setOpenRef(isOpen ? null : entry.ref)}>
+                    {/* Bande latérale difficulté */}
+                    <div style={{ width:4, background:_diffC, flexShrink:0, borderRadius:"0 0 0 0" }} />
+                    {/* Photo */}
+                    <div style={{ width:68, height:68, flexShrink:0, margin:"10px 10px 10px 8px", borderRadius:11, overflow:"hidden", background:"#c8d0e8", border:"1px solid rgba(108,99,255,0.1)", alignSelf:"center" }}>
+                      <img src={photo} alt={entry.ref} onError={e => { e.target.src = getSilcaSVG(entry.blade); }} style={{ width:"100%", height:"100%", objectFit:"contain" }} />
                     </div>
-                  )}
-                </div>
+                    {/* Infos */}
+                    <div style={{ flex:1, minWidth:0, padding:"9px 0 9px 0" }}>
+                      {/* Ligne 1 : ref + badges */}
+                      <div style={{ display:"flex", alignItems:"center", gap:4, flexWrap:"wrap", marginBottom:4 }}>
+                        <span style={{ fontSize:11, fontWeight:900, color:"#fff", background:"linear-gradient(135deg,#cc0000,#ff4040)", padding:"2px 8px", borderRadius:5, letterSpacing:0.3 }}>{entry.ref}</span>
+                        <span style={{ fontSize:9, fontWeight:700, color:TCOL[entry.type], background:TCOL[entry.type]+"18", border:"1px solid "+TCOL[entry.type]+"33", padding:"1px 6px", borderRadius:4 }}>{TLBL[entry.type]}</span>
+                        {inStock
+                          ? <span style={{ fontSize:9, fontWeight:800, color:"#00b87a", background:"rgba(0,245,147,0.12)", border:"1px solid rgba(0,245,147,0.35)", padding:"1px 7px", borderRadius:4 }}>✓ STOCK</span>
+                          : <span style={{ fontSize:9, fontWeight:700, color:"#0284c7", background:"rgba(2,132,199,0.09)", border:"1px solid rgba(2,132,199,0.25)", padding:"1px 6px", borderRadius:4 }}>+ Stock</span>
+                        }
+                        {_isRare && <span style={{ fontSize:9, fontWeight:700, color:"#ff4757", background:"rgba(255,71,87,0.09)", border:"1px solid rgba(255,71,87,0.25)", padding:"1px 6px", borderRadius:4 }}>⚠ RARE</span>}
+                      </div>
+                      {/* Ligne 2 : modèles */}
+                      <div style={{ fontSize:12, fontWeight:700, color:"#1a1d2e", lineHeight:1.35, marginBottom:3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {apps.map(a => `${a.make} ${a.model}`).join(" · ")}{entry.applications.length > 3 ? ` +${entry.applications.length - 3}` : ""}
+                      </div>
+                      {/* Ligne 3 : infos rapides terrain */}
+                      <div style={{ display:"flex", gap:5, flexWrap:"wrap", alignItems:"center" }}>
+                        <span style={{ fontSize:10, fontWeight:600, color:_isML?"#6c63ff":"#5a6585", background:_isML?"rgba(108,99,255,0.09)":"rgba(90,101,133,0.07)", border:`1px solid ${_isML?"rgba(108,99,255,0.2)":"rgba(90,101,133,0.15)"}`, borderRadius:20, padding:"2px 7px" }}>
+                          {_isML ? "🖐 ML" : "🔑 NON ML"}
+                        </span>
+                        <span style={{ fontSize:10, fontWeight:600, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.15)", borderRadius:20, padding:"2px 7px" }}>
+                          {entry.blade} · {entry.freq}
+                        </span>
+                        <span style={{ fontSize:10, fontWeight:700, color:_diffC, background:_diffC+"11", border:`1px solid ${_diffC}30`, borderRadius:20, padding:"2px 7px" }}>
+                          {_diff}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:5, padding:"10px 10px 10px 6px", flexShrink:0 }}>
+                      <button onClick={e => { e.stopPropagation(); inStock ? onViewStock() : handleAdd(entry); }}
+                        style={{ padding:"7px 9px", borderRadius:9, border:"none", fontSize:10, fontWeight:700, cursor:"pointer", lineHeight:1.3, textAlign:"center", whiteSpace:"pre",
+                          background: inStock ? "rgba(0,245,147,0.12)" : "linear-gradient(135deg,#0284c7,#00d4ff)",
+                          color: inStock ? "#00b87a" : "#fff" }}>
+                        {inStock ? "📦\nStock" : "+ Ajouter\nau stock"}
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); setOpenRef(isOpen ? null : entry.ref); }}
+                        style={{ background:"none", border:"none", cursor:"pointer", color:"#8890aa", padding:"2px 4px", display:"flex", alignItems:"center", transition:"transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none" }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
-                {/* Chevron + Bouton */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  <button
-                    onClick={() => inStock ? onViewStock() : handleAdd(entry)}
-                    style={{ padding: "8px 10px", borderRadius: 10, border: "none", fontSize: 11, fontWeight: 700, cursor: "pointer", lineHeight: 1.3, textAlign: "center",
-                      background: inStock ? "rgba(0,245,147,0.12)" : "linear-gradient(135deg,#0284c7,#00d4ff)",
-                      color: inStock ? "#00b87a" : "#fff" }}>
-                    {inStock ? "📦\nStock" : "+ Ajouter\nau stock"}
-                  </button>
-                  <button onClick={() => setOpenRef(isOpen ? null : entry.ref)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#8890aa", padding: "2px 6px", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 2, transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Fiche détail dépliable ── */}
+              {/* ── FICHE DÉTAIL TERRAIN ── */}
               {isOpen && (() => {
                 const trans   = (entry.transponder || "").toUpperCase();
                 const isAES   = trans.includes("AES") || trans.includes("PCF7961") || trans.includes("HITAG PRO") || trans.includes("ID49") || trans.includes("ID4A");
@@ -1559,142 +1571,130 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                 const yMin    = years.length ? Math.min(...years) : null;
                 const yMax    = years.length ? Math.max(...years) : null;
                 const curOeLinks = (oeLinksOverrides && oeLinksOverrides[entry.ref]) ?? entry.oeLinks ?? [];
-                // Badges terrain
+                const diff    = isAES ? "Expert" : isBSI ? "Avancé" : "Standard";
+                const diffC   = isAES ? "#ff4757" : isBSI ? "#e8a020" : "#00b87a";
                 const methode = isML ? "OBD" : "Standard";
-                const tempsMin = entry.buttons >= 3 ? "30min" : "25min";
-                // Équivalents = autres applications de la même lame dans la DB
-                const equivalents = SILCA_DB
+                const temps   = isAES ? "45min" : isBSI ? "35min" : entry.buttons >= 3 ? "30min" : "25min";
+                const equiv   = SILCA_DB
                   .filter(e => e.ref !== entry.ref && e.blade === entry.blade && e.transponder === entry.transponder)
-                  .flatMap(e => e.applications.map(a => `${a.make} ${a.model}${isML?" ML":""}`))
-                  .filter((v,i,arr) => arr.indexOf(v) === i)
-                  .slice(0, 5);
-
-                const BL = "#f0f2f9";
-                const Row = ({label, value, color, bold}) => (
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 14px", borderBottom:"1px solid rgba(108,99,255,0.07)" }}>
-                    <span style={{ fontSize:12, color:"#7a84a0", fontWeight:500 }}>{label}</span>
-                    <span style={{ fontSize:12, fontWeight:bold?800:700, color:color||"#1a1d2e" }}>{value}</span>
+                  .flatMap(e => e.applications.map(a => `${a.make} ${a.model}${isML ? " ML" : ""}`))
+                  .filter((v, i, a) => a.indexOf(v) === i).slice(0, 5);
+                const Row = ({ label, value, color, bold }) => (
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 14px", borderBottom:"1px solid rgba(108,99,255,0.06)" }}>
+                    <span style={{ fontSize:12, color:"#7a84a0" }}>{label}</span>
+                    <span style={{ fontSize:12, fontWeight: bold ? 800 : 600, color: color || "#1a1d2e" }}>{value}</span>
                   </div>
                 );
-
                 return (
-                  <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"#f5f7fc" }}>
+                  <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"#f0f3fa" }}>
 
-                    {/* ── BADGES TERRAIN (ligne rapide) ── */}
-                    <div style={{ padding:"10px 13px 0", display:"flex", gap:6, flexWrap:"wrap" }}>
-                      {isRare && (
-                        <span style={{ fontSize:10, fontWeight:700, color:"#ff4757", background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.22)", borderRadius:20, padding:"3px 10px" }}>
-                          Rare
-                        </span>
-                      )}
-                      {entry.compatible_xhorse && (
-                        <span style={{ fontSize:10, fontWeight:700, color:"#00b87a", background:"rgba(0,184,122,0.08)", border:"1px solid rgba(0,184,122,0.25)", borderRadius:20, padding:"3px 10px" }}>
-                          Xhorse✓
-                        </span>
-                      )}
-                      <span style={{ fontSize:10, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.08)", border:"1px solid rgba(108,99,255,0.18)", borderRadius:20, padding:"3px 10px" }}>
-                        {methode}
-                      </span>
-                      <span style={{ fontSize:10, fontWeight:600, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>
-                        {isML ? "ML" : "NON ML"}
-                      </span>
-                      {yMin && (
-                        <span style={{ fontSize:10, fontWeight:600, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>
-                          📅 {yMin}{yMax && yMax !== yMin ? ` – ${yMax}` : "+"}
-                        </span>
-                      )}
-                      <span style={{ fontSize:10, fontWeight:600, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>
-                        {tempsMin}
-                      </span>
-                      {(isAES || isBSI) && (
-                        <span style={{ fontSize:10, fontWeight:700, color:"#e8a020", background:"rgba(232,160,32,0.09)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:20, padding:"3px 10px" }}>
-                          ⚠ {[isAES&&"AES", isBSI&&"BSI"].filter(Boolean).join("+")}
-                        </span>
-                      )}
+                    {/* BLOC DÉCISION RAPIDE */}
+                    <div style={{ margin:"10px 12px 0", background:"#1a1f35", borderRadius:14, padding:"12px 14px", border:"1px solid rgba(108,99,255,0.3)" }}>
+                      <div style={{ fontSize:9, fontWeight:800, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:10 }}>⚡ Décision rapide</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:7 }}>
+                        <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
+                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>📅 Années</div>
+                          <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{yMin ? `${yMin}${yMax && yMax !== yMin ? `–${yMax}` : "+"}` : "—"}</div>
+                        </div>
+                        <div style={{ background: isML ? "rgba(108,99,255,0.2)" : "rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:`1px solid ${isML ? "rgba(108,99,255,0.4)" : "rgba(255,255,255,0.08)"}` }}>
+                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔑 Type</div>
+                          <div style={{ fontSize:13, fontWeight:800, color: isML ? "#a78bfa" : "#fff" }}>{isML ? "ML" : "NON ML"}</div>
+                        </div>
+                        <div style={{ background: diffC + "22", borderRadius:9, padding:"8px 9px", border:`1px solid ${diffC}44` }}>
+                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>⚠ Risque</div>
+                          <div style={{ fontSize:13, fontWeight:800, color: diffC }}>{diff}</div>
+                        </div>
+                        <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
+                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>⏱ Temps</div>
+                          <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{temps}</div>
+                        </div>
+                        <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
+                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔌 Méthode</div>
+                          <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{methode}</div>
+                        </div>
+                        <div style={{ background: (isAES || isBSI) ? "rgba(232,160,32,0.2)" : "rgba(0,184,122,0.12)", borderRadius:9, padding:"8px 9px", border:`1px solid ${(isAES || isBSI) ? "rgba(232,160,32,0.4)" : "rgba(0,184,122,0.3)"}` }}>
+                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔐 Chiffrement</div>
+                          <div style={{ fontSize:12, fontWeight:800, color: (isAES || isBSI) ? "#e8a020" : "#00b87a" }}>{isAES ? "AES" : isBSI ? "BSI" : "Simple"}</div>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* ── WARNING RARE ── */}
-                    {isRare && (
-                      <div style={{ margin:"9px 13px 0", padding:"8px 12px", background:"rgba(232,160,32,0.07)", border:"1px solid rgba(232,160,32,0.22)", borderRadius:10, display:"flex", alignItems:"flex-start", gap:7 }}>
-                        <span style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
-                        <span style={{ fontSize:11, color:"#7a5800", lineHeight:1.5 }}>
-                          Très rare — confirmer {entry.transponder || "ID"} par lecture avant commande
-                        </span>
+                    {/* ALERTES MÉTIER */}
+                    {(isRare || isAES || isBSI) && (
+                      <div style={{ margin:"9px 12px 0", display:"flex", flexDirection:"column", gap:5 }}>
+                        {isRare && <div style={{ padding:"8px 12px", background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.25)", borderRadius:10, fontSize:11, fontWeight:600, color:"#cc2222", display:"flex", alignItems:"center", gap:7 }}>🔴 Très rare — confirmer {entry.transponder || "l'ID"} par lecture avant commande</div>}
+                        {isAES  && <div style={{ padding:"8px 12px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:10, fontSize:11, fontWeight:600, color:"#7a4f00", display:"flex", alignItems:"center", gap:7 }}>⚠️ Attention AES — outil Pro compatible requis</div>}
+                        {isBSI && !isAES && <div style={{ padding:"8px 12px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:10, fontSize:11, fontWeight:600, color:"#7a4f00", display:"flex", alignItems:"center", gap:7 }}>⚠️ BSI / CAS — logiciel à jour obligatoire</div>}
                       </div>
                     )}
 
-                    {/* ── VÉHICULES COMPATIBLES ── */}
-                    <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                      <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
-                        Variantes compatibles
-                      </div>
+                    {/* BADGES TECHNIQUES */}
+                    <div style={{ padding:"9px 12px 0", display:"flex", gap:5, flexWrap:"wrap" }}>
+                      {entry.transponder && <span style={{ fontSize:10, fontWeight:700, color:"#6c63ff", background:"rgba(108,99,255,0.09)", border:"1px solid rgba(108,99,255,0.22)", borderRadius:20, padding:"3px 10px" }}>{entry.transponder}</span>}
+                      {entry.blade       && <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{entry.blade}</span>}
+                      {entry.freq        && <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{entry.freq}</span>}
+                      <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{temps}</span>
+                    </div>
+
+                    {/* VARIANTES COMPATIBLES */}
+                    <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                      <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>🚗 Variantes compatibles</div>
                       {entry.applications.map((a, i) => (
-                        <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 14px", borderBottom: i < entry.applications.length-1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
+                        <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 13px", borderBottom: i < entry.applications.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
                           <span style={{ fontSize:13, fontWeight:600, color:"#1a1d2e" }}>{a.make} {a.model}</span>
-                          {(a.from || a.to) && (
-                            <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.08)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>
-                              {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
-                            </span>
-                          )}
+                          {(a.from || a.to) && <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.08)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>{a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}</span>}
                         </div>
                       ))}
                     </div>
 
-                    {/* ── TECHNIQUE (style photo 3) ── */}
-                    <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                      <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", display:"flex", alignItems:"center", gap:6 }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                    {/* TECHNIQUE */}
+                    <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                      <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", display:"flex", alignItems:"center", gap:6 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
                         <span style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>Technique</span>
                       </div>
                       {entry.transponder && <Row label="ID transpondeur" value={entry.transponder} color="#6c63ff" bold/>}
-                      {entry.transponder && entry.transponder.includes("PCF") && <Row label="PCF" value={entry.transponder.match(/PCF\w+/)?.[0]||entry.transponder} color="#6c63ff"/>}
-                      {entry.freq        && <Row label="Fréquence"       value={entry.freq}/>}
-                      {entry.blade       && <Row label="Lame"            value={entry.blade}/>}
-                      {entry.buttons != null && <Row label="Boutons" value={`${entry.buttons} bouton${entry.buttons>1?"s":""}`}/>}
-                      <Row label="Type" value={entry.type==="P"?"Carte ML":entry.type==="S"?"Slot":"Remote"} color={entry.type==="P"?"#1a1d2e":undefined}/>
+                      {entry.transponder && entry.transponder.match(/PCF\w+/) && <Row label="PCF" value={entry.transponder.match(/PCF\w+/)[0]} color="#6c63ff"/>}
+                      {entry.freq        && <Row label="Fréquence" value={entry.freq}/>}
+                      {entry.blade       && <Row label="Lame" value={entry.blade}/>}
+                      {entry.buttons != null && <Row label="Boutons" value={`${entry.buttons} bouton${entry.buttons > 1 ? "s" : ""}`}/>}
+                      <Row label="Type" value={entry.type === "P" ? "Carte ML" : entry.type === "S" ? "Slot" : "Remote"}/>
                       <Row label="Système" value="UCH"/>
-                      <Row label="Mains libres" value={isML?"✅ Oui":"Non"} color={isML?"#00b87a":"#5a6585"}/>
+                      <Row label="Mains libres" value={isML ? "✅ Oui" : "Non"} color={isML ? "#00b87a" : "#5a6585"}/>
                     </div>
 
-                    {/* ── FABRICANT / ÉLECTRONIQUE ── */}
+                    {/* FABRICANT */}
                     {curOeLinks.length > 0 && (
-                      <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                        <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
-                          Fabricant / Électronique
-                        </div>
+                      <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                        <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>🏭 Fabricant / Électronique</div>
                         {curOeLinks.map((lnk, li) => (
-                          <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 14px", borderBottom: li < curOeLinks.length-1 ? "1px solid rgba(108,99,255,0.06)" : "none", textDecoration:"none" }}>
-                            <span style={{ fontSize:12, color:"#1a1d2e", fontWeight:600, flex:1 }}>🔗 {lnk.label}</span>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8890aa" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                          <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                            style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 13px", borderBottom: li < curOeLinks.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none", textDecoration:"none" }}>
+                            <span style={{ fontSize:12, color:"#0284c7", fontWeight:600, flex:1 }}>🔗 {lnk.label}</span>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8890aa" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                           </a>
                         ))}
                       </div>
                     )}
 
-                    {/* ── ÉQUIVALENTS ── */}
-                    {equivalents.length > 0 && (
-                      <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                        <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
-                          Équivalents
-                        </div>
-                        {equivalents.map((eq, i) => (
-                          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", borderBottom: i < equivalents.length-1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
-                            <span style={{ fontSize:13, color:"#5a6585" }}>≡</span>
-                            <span style={{ fontSize:13, color:"#1a1d2e", fontWeight:500 }}>{eq}</span>
+                    {/* ÉQUIVALENTS */}
+                    {equiv.length > 0 && (
+                      <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                        <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>≡ Équivalents</div>
+                        {equiv.map((eq, i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"8px 13px", borderBottom: i < equiv.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
+                            <span style={{ fontSize:14, color:"#8890aa" }}>≡</span>
+                            <span style={{ fontSize:13, color:"#1a1d2e" }}>{eq}</span>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* ── NOTE PRODUIT ── */}
                     {entry.note && (
-                      <div style={{ margin:"10px 13px 0", padding:"9px 13px", background:"rgba(108,99,255,0.04)", border:"1px solid rgba(108,99,255,0.1)", borderRadius:11 }}>
+                      <div style={{ margin:"9px 12px 0", padding:"9px 13px", background:"rgba(108,99,255,0.04)", border:"1px solid rgba(108,99,255,0.1)", borderRadius:11 }}>
                         <div style={{ fontSize:10, color:"#5a6585", lineHeight:1.6 }}>ℹ️ {entry.note}</div>
                       </div>
                     )}
-
                     <div style={{ height:12 }}/>
                   </div>
                 );
