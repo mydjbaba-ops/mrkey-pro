@@ -1550,135 +1550,152 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 
               {/* ── Fiche détail dépliable ── */}
               {isOpen && (() => {
-                const trans  = (entry.transponder || "").toUpperCase();
-                const isAES  = trans.includes("AES") || trans.includes("PCF7961") || trans.includes("HITAG PRO") || trans.includes("ID49") || trans.includes("ID4A");
-                const isBSI  = trans.includes("ID88") || trans.includes("ID50") || ["BMW","Audi","Mercedes"].includes(entry.marque);
-                const isRare = entry.applications.length <= 1;
-                const isML   = entry.type === "P";
-                const years  = entry.applications.flatMap(a => [a.from, a.to].filter(Boolean));
-                const yMin   = years.length ? Math.min(...years) : null;
-                const yMax   = years.length ? Math.max(...years) : null;
+                const trans   = (entry.transponder || "").toUpperCase();
+                const isAES   = trans.includes("AES") || trans.includes("PCF7961") || trans.includes("HITAG PRO") || trans.includes("ID49") || trans.includes("ID4A");
+                const isBSI   = trans.includes("ID88") || trans.includes("ID50") || ["BMW","Audi","Mercedes"].includes(entry.marque);
+                const isRare  = entry.applications.length <= 1;
+                const isML    = entry.type === "P";
+                const years   = entry.applications.flatMap(a => [a.from, a.to].filter(Boolean));
+                const yMin    = years.length ? Math.min(...years) : null;
+                const yMax    = years.length ? Math.max(...years) : null;
                 const curOeLinks = (oeLinksOverrides && oeLinksOverrides[entry.ref]) ?? entry.oeLinks ?? [];
-                const Row = ({ label, value, color }) => (
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 12px", borderBottom:"1px solid rgba(108,99,255,0.06)" }}>
-                    <span style={{ fontSize:12, color:"#5a6585" }}>{label}</span>
-                    <span style={{ fontSize:12, fontWeight:700, color:color||"#1a1d2e" }}>{value}</span>
+                // Badges terrain
+                const methode = isML ? "OBD" : "Standard";
+                const tempsMin = entry.buttons >= 3 ? "30min" : "25min";
+                // Équivalents = autres applications de la même lame dans la DB
+                const equivalents = SILCA_DB
+                  .filter(e => e.ref !== entry.ref && e.blade === entry.blade && e.transponder === entry.transponder)
+                  .flatMap(e => e.applications.map(a => `${a.make} ${a.model}${isML?" ML":""}`))
+                  .filter((v,i,arr) => arr.indexOf(v) === i)
+                  .slice(0, 5);
+
+                const BL = "#f0f2f9";
+                const Row = ({label, value, color, bold}) => (
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 14px", borderBottom:"1px solid rgba(108,99,255,0.07)" }}>
+                    <span style={{ fontSize:12, color:"#7a84a0", fontWeight:500 }}>{label}</span>
+                    <span style={{ fontSize:12, fontWeight:bold?800:700, color:color||"#1a1d2e" }}>{value}</span>
                   </div>
                 );
+
                 return (
-                  <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"rgba(108,99,255,0.025)" }}>
+                  <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"#f5f7fc" }}>
 
-                    {/* ── INFOS TERRAIN RAPIDES ── */}
-                    <div style={{ padding:"11px 13px 0", display:"flex", gap:7, flexWrap:"wrap" }}>
-                      {yMin && (
-                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:10, padding:"6px 10px" }}>
-                          <span style={{ fontSize:12 }}>📅</span>
-                          <div>
-                            <div style={{ fontSize:8, fontWeight:700, color:"#5a6585", textTransform:"uppercase", letterSpacing:0.8 }}>Années</div>
-                            <div style={{ fontSize:12, fontWeight:800, color:"#1a1d2e" }}>{yMin}{yMax && yMax !== yMin ? ` – ${yMax}` : "+"}</div>
-                          </div>
-                        </div>
-                      )}
-                      <div style={{ display:"flex", alignItems:"center", gap:5, background:isML?"rgba(108,99,255,0.1)":"rgba(90,101,133,0.07)", border:isML?"1px solid rgba(108,99,255,0.25)":"1px solid rgba(90,101,133,0.18)", borderRadius:10, padding:"6px 10px" }}>
-                        <span style={{ fontSize:12 }}>{isML ? "🖐" : "🔑"}</span>
-                        <div>
-                          <div style={{ fontSize:8, fontWeight:700, color:"#5a6585", textTransform:"uppercase", letterSpacing:0.8 }}>Type</div>
-                          <div style={{ fontSize:12, fontWeight:800, color:isML?"#6c63ff":"#1a1d2e" }}>{isML ? "Mains libres" : "Standard"}</div>
-                        </div>
-                      </div>
-                      {(isAES || isBSI) && (
-                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(232,160,32,0.1)", border:"1px solid rgba(232,160,32,0.3)", borderRadius:10, padding:"6px 10px" }}>
-                          <span style={{ fontSize:12 }}>⚠️</span>
-                          <div>
-                            <div style={{ fontSize:8, fontWeight:700, color:"#e8a020", textTransform:"uppercase", letterSpacing:0.8 }}>Risque</div>
-                            <div style={{ fontSize:12, fontWeight:800, color:"#e8a020" }}>{[isAES&&"AES", isBSI&&"BSI"].filter(Boolean).join(" + ")}</div>
-                          </div>
-                        </div>
-                      )}
+                    {/* ── BADGES TERRAIN (ligne rapide) ── */}
+                    <div style={{ padding:"10px 13px 0", display:"flex", gap:6, flexWrap:"wrap" }}>
                       {isRare && (
-                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.25)", borderRadius:10, padding:"6px 10px" }}>
-                          <span style={{ fontSize:12 }}>🔴</span>
-                          <div>
-                            <div style={{ fontSize:8, fontWeight:700, color:"#ff4757", textTransform:"uppercase", letterSpacing:0.8 }}>Fréquence</div>
-                            <div style={{ fontSize:12, fontWeight:800, color:"#ff4757" }}>Rare</div>
-                          </div>
-                        </div>
+                        <span style={{ fontSize:10, fontWeight:700, color:"#ff4757", background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.22)", borderRadius:20, padding:"3px 10px" }}>
+                          Rare
+                        </span>
+                      )}
+                      {entry.compatible_xhorse && (
+                        <span style={{ fontSize:10, fontWeight:700, color:"#00b87a", background:"rgba(0,184,122,0.08)", border:"1px solid rgba(0,184,122,0.25)", borderRadius:20, padding:"3px 10px" }}>
+                          Xhorse✓
+                        </span>
+                      )}
+                      <span style={{ fontSize:10, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.08)", border:"1px solid rgba(108,99,255,0.18)", borderRadius:20, padding:"3px 10px" }}>
+                        {methode}
+                      </span>
+                      <span style={{ fontSize:10, fontWeight:600, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>
+                        {isML ? "ML" : "NON ML"}
+                      </span>
+                      {yMin && (
+                        <span style={{ fontSize:10, fontWeight:600, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>
+                          📅 {yMin}{yMax && yMax !== yMin ? ` – ${yMax}` : "+"}
+                        </span>
+                      )}
+                      <span style={{ fontSize:10, fontWeight:600, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>
+                        {tempsMin}
+                      </span>
+                      {(isAES || isBSI) && (
+                        <span style={{ fontSize:10, fontWeight:700, color:"#e8a020", background:"rgba(232,160,32,0.09)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:20, padding:"3px 10px" }}>
+                          ⚠ {[isAES&&"AES", isBSI&&"BSI"].filter(Boolean).join("+")}
+                        </span>
                       )}
                     </div>
 
-                    {/* ── VÉHICULES COMPATIBLES ── */}
-                    <div style={{ padding:"11px 13px 0" }}>
-                      <div style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2, marginBottom:7 }}>
-                        🚗 Véhicules compatibles ({entry.applications.length})
-                      </div>
-                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                        {entry.applications.map((a, i) => (
-                          <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 11px", background:"#e8edf8", borderRadius:11, border:"1px solid rgba(108,99,255,0.07)" }}>
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <span style={{ fontSize:13, fontWeight:700, color:"#1a1d2e" }}>{a.make} {a.model}</span>
-                              {a.chassis && <span style={{ fontSize:10, color:"#8890aa", marginLeft:6 }}>{a.chassis}</span>}
-                            </div>
-                            {(a.from || a.to) && (
-                              <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.1)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>
-                                {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* ── FICHE TECHNIQUE (style tableau photo 3) ── */}
-                    <div style={{ margin:"11px 13px 0", background:"#e8edf8", borderRadius:13, border:"1px solid rgba(108,99,255,0.12)", overflow:"hidden" }}>
-                      <div style={{ padding:"8px 12px 6px", borderBottom:"1px solid rgba(108,99,255,0.08)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
-                        🔧 Technique
-                      </div>
-                      {entry.transponder && <Row label="ID transpondeur" value={entry.transponder} color="#6c63ff"/>}
-                      {entry.freq        && <Row label="Fréquence"       value={entry.freq}/>}
-                      {entry.blade       && <Row label="Lame"            value={entry.blade}/>}
-                      {entry.buttons     && <Row label="Boutons"         value={`${entry.buttons} bouton${entry.buttons>1?"s":""}`}/>}
-                      <Row label="Type" value={entry.type==="P"?"Proximité (ML)":entry.type==="S"?"Slot":"Télécommande"} color={entry.type==="P"?"#6c63ff":undefined}/>
-                      <Row label="Mains libres" value={isML?"✅ Oui":"Non"} color={isML?"#00b87a":"#5a6585"}/>
-                    </div>
-
-                    {/* ── WARNING TERRAIN ── */}
-                    {(isAES || isBSI || isRare) && (
-                      <div style={{ margin:"9px 13px 0", padding:"8px 11px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.25)", borderRadius:11 }}>
-                        <div style={{ fontSize:9, fontWeight:800, color:"#e8a020", textTransform:"uppercase", letterSpacing:1, marginBottom:3 }}>⚠ Note terrain</div>
-                        <div style={{ fontSize:11, color:"#5a4000", lineHeight:1.5 }}>
-                          {isRare && "Référence rare — confirmer par lecture avant commande. "}
-                          {isAES  && "Chiffrement AES — outil Pro compatible requis. "}
-                          {isBSI  && "BSI/CAS — logiciel à jour obligatoire."}
-                        </div>
+                    {/* ── WARNING RARE ── */}
+                    {isRare && (
+                      <div style={{ margin:"9px 13px 0", padding:"8px 12px", background:"rgba(232,160,32,0.07)", border:"1px solid rgba(232,160,32,0.22)", borderRadius:10, display:"flex", alignItems:"flex-start", gap:7 }}>
+                        <span style={{ fontSize:13, flexShrink:0 }}>⚠️</span>
+                        <span style={{ fontSize:11, color:"#7a5800", lineHeight:1.5 }}>
+                          Très rare — confirmer {entry.transponder || "ID"} par lecture avant commande
+                        </span>
                       </div>
                     )}
 
-                    {/* ── FABRICANT / ÉLECTRONIQUE (Marelli, Delphi…) ── */}
+                    {/* ── VÉHICULES COMPATIBLES ── */}
+                    <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                      <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
+                        Variantes compatibles
+                      </div>
+                      {entry.applications.map((a, i) => (
+                        <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 14px", borderBottom: i < entry.applications.length-1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
+                          <span style={{ fontSize:13, fontWeight:600, color:"#1a1d2e" }}>{a.make} {a.model}</span>
+                          {(a.from || a.to) && (
+                            <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.08)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>
+                              {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ── TECHNIQUE (style photo 3) ── */}
+                    <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                      <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", display:"flex", alignItems:"center", gap:6 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                        <span style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>Technique</span>
+                      </div>
+                      {entry.transponder && <Row label="ID transpondeur" value={entry.transponder} color="#6c63ff" bold/>}
+                      {entry.transponder && entry.transponder.includes("PCF") && <Row label="PCF" value={entry.transponder.match(/PCF\w+/)?.[0]||entry.transponder} color="#6c63ff"/>}
+                      {entry.freq        && <Row label="Fréquence"       value={entry.freq}/>}
+                      {entry.blade       && <Row label="Lame"            value={entry.blade}/>}
+                      {entry.buttons != null && <Row label="Boutons" value={`${entry.buttons} bouton${entry.buttons>1?"s":""}`}/>}
+                      <Row label="Type" value={entry.type==="P"?"Carte ML":entry.type==="S"?"Slot":"Remote"} color={entry.type==="P"?"#1a1d2e":undefined}/>
+                      <Row label="Système" value="UCH"/>
+                      <Row label="Mains libres" value={isML?"✅ Oui":"Non"} color={isML?"#00b87a":"#5a6585"}/>
+                    </div>
+
+                    {/* ── FABRICANT / ÉLECTRONIQUE ── */}
                     {curOeLinks.length > 0 && (
-                      <div style={{ padding:"11px 13px 0" }}>
-                        <div style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2, marginBottom:7 }}>
-                          🏭 Fabricant / Électronique
+                      <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                        <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
+                          Fabricant / Électronique
                         </div>
-                        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                          {curOeLinks.map((lnk, li) => (
-                            <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
-                              onClick={e => e.stopPropagation()}
-                              style={{ fontSize:11, fontWeight:700, color:"#0284c7", background:"rgba(2,132,199,0.08)", border:"1px solid rgba(2,132,199,0.2)", borderRadius:20, padding:"5px 12px", textDecoration:"none", display:"inline-flex", alignItems:"center", gap:4 }}>
-                              🔗 {lnk.label}
-                            </a>
-                          ))}
+                        {curOeLinks.map((lnk, li) => (
+                          <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 14px", borderBottom: li < curOeLinks.length-1 ? "1px solid rgba(108,99,255,0.06)" : "none", textDecoration:"none" }}>
+                            <span style={{ fontSize:12, color:"#1a1d2e", fontWeight:600, flex:1 }}>🔗 {lnk.label}</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8890aa" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── ÉQUIVALENTS ── */}
+                    {equivalents.length > 0 && (
+                      <div style={{ margin:"10px 13px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+                        <div style={{ padding:"9px 14px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
+                          Équivalents
                         </div>
+                        {equivalents.map((eq, i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", borderBottom: i < equivalents.length-1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
+                            <span style={{ fontSize:13, color:"#5a6585" }}>≡</span>
+                            <span style={{ fontSize:13, color:"#1a1d2e", fontWeight:500 }}>{eq}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
 
                     {/* ── NOTE PRODUIT ── */}
                     {entry.note && (
-                      <div style={{ margin:"9px 13px 0", padding:"8px 11px", background:"rgba(108,99,255,0.05)", border:"1px solid rgba(108,99,255,0.12)", borderRadius:11 }}>
-                        <div style={{ fontSize:10, color:"#5a6585", lineHeight:1.5 }}>ℹ️ {entry.note}</div>
+                      <div style={{ margin:"10px 13px 0", padding:"9px 13px", background:"rgba(108,99,255,0.04)", border:"1px solid rgba(108,99,255,0.1)", borderRadius:11 }}>
+                        <div style={{ fontSize:10, color:"#5a6585", lineHeight:1.6 }}>ℹ️ {entry.note}</div>
                       </div>
                     )}
 
-                    <div style={{ height:11 }}/>
+                    <div style={{ height:12 }}/>
                   </div>
                 );
               })()}
