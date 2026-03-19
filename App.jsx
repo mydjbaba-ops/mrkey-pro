@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { supabase, dbSet, dbGetAll } from "./src/supabase";
 import AuthScreen, { ResetPasswordScreen } from "./src/AuthScreen";
-import BaseVehicule from "./components/BaseVehicule";
 
 
 
@@ -2045,50 +2044,140 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                 </div>
               </div>
 
-              {/* ── Détail déplié ── */}
-              {isOpen && (
-                <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "14px 14px 12px", background: "rgba(108,99,255,0.025)" }}>
-                  {/* Titre nb véhicules */}
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#3d4870", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10 }}>
-                    {entry.applications.length} véhicule{entry.applications.length > 1 ? "s" : ""} compatible{entry.applications.length > 1 ? "s" : ""}
+              {/* ── Fiche détail dépliable ── */}
+              {isOpen && (() => {
+                const trans  = (entry.transponder || "").toUpperCase();
+                const isAES  = trans.includes("AES") || trans.includes("PCF7961") || trans.includes("HITAG PRO") || trans.includes("ID49") || trans.includes("ID4A");
+                const isBSI  = trans.includes("ID88") || trans.includes("ID50") || ["BMW","Audi","Mercedes"].includes(entry.marque);
+                const isRare = entry.applications.length <= 1;
+                const isML   = entry.type === "P";
+                const years  = entry.applications.flatMap(a => [a.from, a.to].filter(Boolean));
+                const yMin   = years.length ? Math.min(...years) : null;
+                const yMax   = years.length ? Math.max(...years) : null;
+                const curOeLinks = (oeLinksOverrides && oeLinksOverrides[entry.ref]) ?? entry.oeLinks ?? [];
+                const Row = ({ label, value, color }) => (
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 12px", borderBottom:"1px solid rgba(108,99,255,0.06)" }}>
+                    <span style={{ fontSize:12, color:"#5a6585" }}>{label}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:color||"#1a1d2e" }}>{value}</span>
                   </div>
-                  {/* Liste véhicules */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 12 }}>
-                    {entry.applications.map((a, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", background: "#e8edf8", borderRadius: 12, border: "1px solid rgba(108,99,255,0.07)" }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>{a.make} {a.model}</span>
-                          {a.chassis && <span style={{ fontSize: 10, color: "#8890aa", marginLeft: 7, fontWeight: 500 }}>{a.chassis}</span>}
-                          {a.note && <span style={{ fontSize: 9, color: "#6c63ff", marginLeft: 6, fontStyle: "italic" }}>{a.note}</span>}
+                );
+                return (
+                  <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"rgba(108,99,255,0.025)" }}>
+
+                    {/* ── INFOS TERRAIN RAPIDES ── */}
+                    <div style={{ padding:"11px 13px 0", display:"flex", gap:7, flexWrap:"wrap" }}>
+                      {yMin && (
+                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:10, padding:"6px 10px" }}>
+                          <span style={{ fontSize:12 }}>📅</span>
+                          <div>
+                            <div style={{ fontSize:8, fontWeight:700, color:"#5a6585", textTransform:"uppercase", letterSpacing:0.8 }}>Années</div>
+                            <div style={{ fontSize:12, fontWeight:800, color:"#1a1d2e" }}>{yMin}{yMax && yMax !== yMin ? ` – ${yMax}` : "+"}</div>
+                          </div>
                         </div>
-                        {(a.from || a.to) && (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.1)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0, marginLeft: 8 }}>
-                            {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
-                          </span>
-                        )}
+                      )}
+                      <div style={{ display:"flex", alignItems:"center", gap:5, background:isML?"rgba(108,99,255,0.1)":"rgba(90,101,133,0.07)", border:isML?"1px solid rgba(108,99,255,0.25)":"1px solid rgba(90,101,133,0.18)", borderRadius:10, padding:"6px 10px" }}>
+                        <span style={{ fontSize:12 }}>{isML ? "🖐" : "🔑"}</span>
+                        <div>
+                          <div style={{ fontSize:8, fontWeight:700, color:"#5a6585", textTransform:"uppercase", letterSpacing:0.8 }}>Type</div>
+                          <div style={{ fontSize:12, fontWeight:800, color:isML?"#6c63ff":"#1a1d2e" }}>{isML ? "Mains libres" : "Standard"}</div>
+                        </div>
                       </div>
-                    ))}
+                      {(isAES || isBSI) && (
+                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(232,160,32,0.1)", border:"1px solid rgba(232,160,32,0.3)", borderRadius:10, padding:"6px 10px" }}>
+                          <span style={{ fontSize:12 }}>⚠️</span>
+                          <div>
+                            <div style={{ fontSize:8, fontWeight:700, color:"#e8a020", textTransform:"uppercase", letterSpacing:0.8 }}>Risque</div>
+                            <div style={{ fontSize:12, fontWeight:800, color:"#e8a020" }}>{[isAES&&"AES", isBSI&&"BSI"].filter(Boolean).join(" + ")}</div>
+                          </div>
+                        </div>
+                      )}
+                      {isRare && (
+                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.25)", borderRadius:10, padding:"6px 10px" }}>
+                          <span style={{ fontSize:12 }}>🔴</span>
+                          <div>
+                            <div style={{ fontSize:8, fontWeight:700, color:"#ff4757", textTransform:"uppercase", letterSpacing:0.8 }}>Fréquence</div>
+                            <div style={{ fontSize:12, fontWeight:800, color:"#ff4757" }}>Rare</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── VÉHICULES COMPATIBLES ── */}
+                    <div style={{ padding:"11px 13px 0" }}>
+                      <div style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2, marginBottom:7 }}>
+                        🚗 Véhicules compatibles ({entry.applications.length})
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                        {entry.applications.map((a, i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 11px", background:"#e8edf8", borderRadius:11, border:"1px solid rgba(108,99,255,0.07)" }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <span style={{ fontSize:13, fontWeight:700, color:"#1a1d2e" }}>{a.make} {a.model}</span>
+                              {a.chassis && <span style={{ fontSize:10, color:"#8890aa", marginLeft:6 }}>{a.chassis}</span>}
+                            </div>
+                            {(a.from || a.to) && (
+                              <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.1)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>
+                                {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ── FICHE TECHNIQUE (style tableau photo 3) ── */}
+                    <div style={{ margin:"11px 13px 0", background:"#e8edf8", borderRadius:13, border:"1px solid rgba(108,99,255,0.12)", overflow:"hidden" }}>
+                      <div style={{ padding:"8px 12px 6px", borderBottom:"1px solid rgba(108,99,255,0.08)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
+                        🔧 Technique
+                      </div>
+                      {entry.transponder && <Row label="ID transpondeur" value={entry.transponder} color="#6c63ff"/>}
+                      {entry.freq        && <Row label="Fréquence"       value={entry.freq}/>}
+                      {entry.blade       && <Row label="Lame"            value={entry.blade}/>}
+                      {entry.buttons     && <Row label="Boutons"         value={`${entry.buttons} bouton${entry.buttons>1?"s":""}`}/>}
+                      <Row label="Type" value={entry.type==="P"?"Proximité (ML)":entry.type==="S"?"Slot":"Télécommande"} color={entry.type==="P"?"#6c63ff":undefined}/>
+                      <Row label="Mains libres" value={isML?"✅ Oui":"Non"} color={isML?"#00b87a":"#5a6585"}/>
+                    </div>
+
+                    {/* ── WARNING TERRAIN ── */}
+                    {(isAES || isBSI || isRare) && (
+                      <div style={{ margin:"9px 13px 0", padding:"8px 11px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.25)", borderRadius:11 }}>
+                        <div style={{ fontSize:9, fontWeight:800, color:"#e8a020", textTransform:"uppercase", letterSpacing:1, marginBottom:3 }}>⚠ Note terrain</div>
+                        <div style={{ fontSize:11, color:"#5a4000", lineHeight:1.5 }}>
+                          {isRare && "Référence rare — confirmer par lecture avant commande. "}
+                          {isAES  && "Chiffrement AES — outil Pro compatible requis. "}
+                          {isBSI  && "BSI/CAS — logiciel à jour obligatoire."}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── FABRICANT / ÉLECTRONIQUE (Marelli, Delphi…) ── */}
+                    {curOeLinks.length > 0 && (
+                      <div style={{ padding:"11px 13px 0" }}>
+                        <div style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2, marginBottom:7 }}>
+                          🏭 Fabricant / Électronique
+                        </div>
+                        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                          {curOeLinks.map((lnk, li) => (
+                            <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              style={{ fontSize:11, fontWeight:700, color:"#0284c7", background:"rgba(2,132,199,0.08)", border:"1px solid rgba(2,132,199,0.2)", borderRadius:20, padding:"5px 12px", textDecoration:"none", display:"inline-flex", alignItems:"center", gap:4 }}>
+                              🔗 {lnk.label}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── NOTE PRODUIT ── */}
+                    {entry.note && (
+                      <div style={{ margin:"9px 13px 0", padding:"8px 11px", background:"rgba(108,99,255,0.05)", border:"1px solid rgba(108,99,255,0.12)", borderRadius:11 }}>
+                        <div style={{ fontSize:10, color:"#5a6585", lineHeight:1.5 }}>ℹ️ {entry.note}</div>
+                      </div>
+                    )}
+
+                    <div style={{ height:11 }}/>
                   </div>
-                  {/* Pills specs */}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {entry.transponder && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
-                        🔐 {entry.transponder}
-                      </span>
-                    )}
-                    {entry.freq && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
-                        📡 {entry.freq}
-                      </span>
-                    )}
-                    {entry.blade && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
-                        🔑 Lame {entry.blade}{entry.buttons ? ` · ${entry.buttons} btn` : ""}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           );
         })}
@@ -2309,35 +2398,6 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [page, setPage] = useState("home");
-
-  // ── Images chargées lazily (aftermarket/recherche) ──────────
-  const [imgAssets, setImgAssets] = React.useState({
-    KEY_IMAGES: null, SILCA_IMGS: null, XHORSE_IMAGES: null
-  });
-  React.useEffect(() => {
-    if ((page === "aftermarket" || page === "recherche") && !imgAssets.KEY_IMAGES) {
-      Promise.all([
-        import("./keyImages.js"),
-        import("./silcaImages.js"),
-        import("./xhorseImages.js"),
-      ]).then(([ki, si, xi]) => {
-        setImgAssets({
-          KEY_IMAGES:    ki.KEY_IMAGES,
-          SILCA_IMGS:    si.SILCA_IMGS,
-          XHORSE_IMAGES: xi.XHORSE_IMAGES,
-        });
-      });
-    }
-  }, [page]);
-  const KEY_IMAGES    = imgAssets.KEY_IMAGES    || {};
-  const SILCA_IMGS    = imgAssets.SILCA_IMGS    || {};
-  const XHORSE_IMAGES = imgAssets.XHORSE_IMAGES || {};
-  const [vehiculesDB, setVehiculesDB] = useState(null);
-  useEffect(() => {
-    if (page === "vehicules" && !vehiculesDB) {
-      import("./data/vehiculesDB.js").then(m => setVehiculesDB(m.default));
-    }
-  }, [page]);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
@@ -3478,7 +3538,6 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
               { key: "aftermarket",  icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>, label: "Aftermkt" },
               { key: "clients",      icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "Clients" },
               { key: "stats",        icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, label: "Stats" },
-              { key: "vehicules",   icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>, label: "Base Clés" },
               { key: "settings",     icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, label: "Réglages" },
             ].map(item => (
               <button key={item.key} onClick={() => setPage(item.key)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", padding: "4px 0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -3585,7 +3644,6 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
         {page === "clientDetail" && selectedClient && renderClientDetail()}
         {page === "stats" && renderStats()}
         {page === "settings" && renderSettings()}
-        {page === "vehicules" && <BaseVehicule db={vehiculesDB} />}
 
         {factureUrl && (() => {
           const { interv, prod, num, tva, client: fc } = factureUrl;
