@@ -41,36 +41,29 @@ export default async function handler(req, res) {
     const titreEtTexte = titre + " " + texte.slice(0, 3000);
     const marque = MARQUES.find(m => titreEtTexte.toLowerCase().includes(m.toLowerCase())) || "";
 
-    // Modèles
-    const MODELES = [
-      "clio","megane","scenic","laguna","kangoo","trafic","master","captur","twingo","zoe","duster","arkana",
-      "206","207","208","306","307","308","406","407","508","3008","5008","partner","berlingo","rifter",
-      "c3","c4","c5","xsara","picasso","dispatch","jumpy","jumper",
-      "golf","polo","passat","tiguan","touran","caddy","transporter","t5","t6","sharan","touareg",
-      "serie 1","serie 2","serie 3","serie 5","serie 7","x1","x3","x5","x6",
-      "classe a","classe b","classe c","classe e","vito","sprinter","glc","gle",
-      "a1","a3","a4","a5","a6","a7","a8","q2","q3","q5","q7","tt",
-      "fiesta","focus","mondeo","transit","kuga","mustang","tourneo","ranger",
-      "corsa","astra","vectra","zafira","insignia","vivaro","mokka","grandland",
-      "yaris","corolla","rav4","land cruiser","auris","prius","aygo",
-      "qashqai","micra","juke","x-trail","navara","note","almera",
-      "punto","panda","500","doblo","ducato","tipo",
-      "ibiza","leon","alhambra","ateca","arona",
-      "octavia","fabia","superb","kodiaq","karoq",
-      "civic","jazz","cr-v","accord","hr-v",
-      "sandero","logan","dokker","lodgy",
-      "tucson","ix35","i20","i30","santa fe","kona",
-      "sportage","ceed","picanto","stonic","sorento",
-      "swift","vitara","sx4","jimny",
-      "outlander","asx","l200","eclipse cross",
-      "cayenne","macan","panamera","911","boxster",
-      "giulia","stelvio","mito","giulietta",
-      "discovery","defender","freelander","range rover",
-      "quattroporte","ghibli","levante","granturismo",
-      "cruze","captiva","orlando","trax",
+    // Modèles — extraction STRICTE depuis section compatibilité uniquement
+    let modeles = "";
+    const compatPatterns = [
+      /(?:convient aux mod[eè]les suivants|compatible avec les mod[eè]les suivants|v[eé]hicules compatibles|la cl[eé][^<]{0,50}convient|fits the following|suitable for)[\s\S]{0,5000}?<\/(?:table|div|ul|section)>/i,
+      /<table[\s\S]{0,300}?(?:marque|make|mod[eè]le|model|ann[eé]e|year)[\s\S]{0,6000}?<\/table>/i,
     ];
-    const modelesDetectes = MODELES.filter(m => titreEtTexte.toLowerCase().includes(m));
-    const modeles = [...new Set(modelesDetectes)].map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(", ");
+    let compatHtml = "";
+    for (const pat of compatPatterns) {
+      const m = html.match(pat);
+      if (m) { compatHtml = m[0]; break; }
+    }
+    if (compatHtml) {
+      const compatTexte = compatHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const lignes = compatTexte.split(/[;|\n]/).map(l => l.trim()).filter(l => l.length > 3 && l.length < 60);
+      const modelesSet = new Set();
+      lignes.forEach(l => {
+        if (/[A-Z][a-z]/.test(l)) {
+          const clean = l.replace(/\(\d{4}[^)]*\)/g, "").replace(/\d{4,}/g, "").trim().replace(/\s+/g, " ");
+          if (clean.length > 2 && clean.length < 40) modelesSet.add(clean);
+        }
+      });
+      modeles = [...modelesSet].join(", ");
+    }
 
     // Caractéristiques techniques
     const freqMatch = texte.match(/(\d{3}[\.,]\d+\s*mhz|\d{3}\s*mhz)/i);
