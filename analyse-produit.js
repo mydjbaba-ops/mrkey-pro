@@ -41,11 +41,14 @@ export default async function handler(req, res) {
     const titreEtTexte = titre + " " + texte.slice(0, 3000);
     const marque = MARQUES.find(m => titreEtTexte.toLowerCase().includes(m.toLowerCase())) || "";
 
-    // Modèles — extraction STRICTE depuis section compatibilité uniquement
+    // Modèles — extraction STRICTE depuis titre + section compatibilité HTML uniquement
+    // Règle : jamais de liste interne, jamais d'inférence, jamais de deduction depuis le texte global
     let modeles = "";
+
+    // 1. Chercher une section compatibilité explicite dans le HTML (tableau ou liste)
     const compatPatterns = [
-      /(?:convient aux mod[eè]les suivants|compatible avec les mod[eè]les suivants|v[eé]hicules compatibles|la cl[eé][^<]{0,50}convient|fits the following|suitable for)[\s\S]{0,5000}?<\/(?:table|div|ul|section)>/i,
-      /<table[\s\S]{0,300}?(?:marque|make|mod[eè]le|model|ann[eé]e|year)[\s\S]{0,6000}?<\/table>/i,
+      /(?:convient aux mod[eè]les suivants|compatible avec les mod[eè]les suivants|v[eé]hicules compatibles|la cl[eé][^<]{0,80}convient|fits the following|suitable for)[\s\S]{0,8000}?<\/(?:table|div|ul|section)>/i,
+      /<table[\s\S]{0,300}?(?:marque|make|mod[eè]le|model|ann[eé]e|year)[\s\S]{0,8000}?<\/table>/i,
     ];
     let compatHtml = "";
     for (const pat of compatPatterns) {
@@ -54,16 +57,36 @@ export default async function handler(req, res) {
     }
     if (compatHtml) {
       const compatTexte = compatHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      const lignes = compatTexte.split(/[;|\n]/).map(l => l.trim()).filter(l => l.length > 3 && l.length < 60);
+      const lignes = compatTexte.split(/[;|\n]/).map(l => l.trim()).filter(l => l.length > 3 && l.length < 80);
       const modelesSet = new Set();
       lignes.forEach(l => {
         if (/[A-Z][a-z]/.test(l)) {
           const clean = l.replace(/\(\d{4}[^)]*\)/g, "").replace(/\d{4,}/g, "").trim().replace(/\s+/g, " ");
-          if (clean.length > 2 && clean.length < 40) modelesSet.add(clean);
+          if (clean.length > 2 && clean.length < 50) modelesSet.add(clean);
         }
       });
       modeles = [...modelesSet].join(", ");
     }
+
+    // 2. Fallback : extraire UNIQUEMENT depuis le titre de la page (source fiable mr-key.com)
+    // Ex: "Clé Télécommande pour Audi A4 Q5 A5 A6 PCF7945..." → "A4, Q5, A5, A6"
+    if (!modeles && titre) {
+      // Cherche les modèles listés après "pour [Marque]" dans le titre
+      const titreClean = titre.replace(/pcf\d+|\d+mhz|\d+hz|[0-9]{5,}/gi, "").trim();
+      const pourMatch = titreClean.match(/pour\s+([A-Za-zÀ-ÿ]+)\s+(.+?)(?:\s+(?:pcf|id\d|\d{3}mhz|avec|clé|telecommande|key|remote)|$)/i);
+      if (pourMatch) {
+        const marqueDetectee = pourMatch[1];
+        const modelePart = pourMatch[2];
+        // Extraire les modèles séparés par espaces ou virgules (ex: "A4 Q5 A5 A6")
+        const mods = modelePart.split(/[,\s]+/).map(m => m.trim()).filter(m => m.length >= 2 && m.length <= 8 && /^[A-Za-z0-9-]+$/.test(m));
+        if (mods.length > 0) {
+          modeles = mods.map(m => marqueDetectee + " " + m).join(", ");
+        }
+      }
+    }
+
+    // Si aucune source fiable → laisser vide
+    if (!modeles) modeles = "";
 
     // Caractéristiques techniques
     const freqMatch = texte.match(/(\d{3}[\.,]\d+\s*mhz|\d{3}\s*mhz)/i);
