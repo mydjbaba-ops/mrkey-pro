@@ -52,6 +52,7 @@ const INTERV_KEY  = "mrkey_interventions_v1";
 const DEVIS_KEY   = "mrkey_devis_v1";
 const SETTINGS_KEY= "mrkey_settings_v1";
 const OE_LINKS_KEY = "mrkey_oe_links_v1";
+const SILCA_OV_KEY = "mrkey_silca_ov_v1";
 const COUNTERS_KEY= "mrkey_counters_v1";
 
 // Générateur de numéros séquentiels légaux
@@ -1375,7 +1376,224 @@ function DragScrollTabs({ filterMarque, setFilterMarque, marques }) {
   );
 }
 
-function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlImport, oeLinksOverrides, S, customItems = [], onDeleteCustom }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// SilcaDetail — fiche dépliée d'une entrée Silca (hooks valides ici)
+// ─────────────────────────────────────────────────────────────────────────────
+function SilcaDetail({ entry, oeLinksOverrides, silcaOverrides = {}, setSilcaOverrides }) {
+  const ov = silcaOverrides[entry.ref] || {};
+  const d = { ...entry, ...ov };
+
+  const [editing, setEditing] = React.useState(false);
+  const [form, setForm] = React.useState({
+    blade:       d.blade       || "",
+    freq:        d.freq        || "",
+    transponder: d.transponder || "",
+    buttons:     d.buttons != null ? String(d.buttons) : "",
+    note:        ov.note       || entry.note || "",
+    lien:        ov.lien       || "",
+  });
+
+  const trans  = (d.transponder || "").toUpperCase();
+  const isAES  = trans.includes("AES") || trans.includes("PCF7961") || trans.includes("HITAG PRO") || trans.includes("ID49") || trans.includes("ID4A");
+  const isBSI  = trans.includes("ID88") || trans.includes("ID50") || ["BMW","Audi","Mercedes"].includes(d.marque);
+  const isRare = entry.applications.length <= 1;
+  const isML   = d.type === "P";
+  const years  = entry.applications.flatMap(a => [a.from, a.to].filter(Boolean));
+  const yMin   = years.length ? Math.min(...years) : null;
+  const yMax   = years.length ? Math.max(...years) : null;
+  const curOeLinks = (oeLinksOverrides && oeLinksOverrides[entry.ref]) ?? entry.oeLinks ?? [];
+  const diff   = isAES ? "Expert" : isBSI ? "Avancé" : "Standard";
+  const diffC  = isAES ? "#ff4757" : isBSI ? "#e8a020" : "#00b87a";
+  const methode = isML ? "OBD" : "Standard";
+  const temps  = isAES ? "45min" : isBSI ? "35min" : (d.buttons >= 3 ? "30min" : "25min");
+  const equiv  = SILCA_DB
+    .filter(e => e.ref !== entry.ref && e.blade === entry.blade && e.transponder === entry.transponder)
+    .flatMap(e => e.applications.map(a => `${a.make} ${a.model}${isML ? " ML" : ""}`))
+    .filter((v, i, a) => a.indexOf(v) === i).slice(0, 5);
+  const hasOverride = Object.keys(ov).length > 0;
+
+  const Row = ({ label, value, color, bold }) => (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 14px", borderBottom:"1px solid rgba(108,99,255,0.06)" }}>
+      <span style={{ fontSize:12, color:"#7a84a0" }}>{label}</span>
+      <span style={{ fontSize:12, fontWeight: bold ? 800 : 600, color: color || "#1a1d2e" }}>{value}</span>
+    </div>
+  );
+
+  const saveEdit = () => {
+    setSilcaOverrides(prev => ({
+      ...prev,
+      [entry.ref]: {
+        blade:       form.blade       || undefined,
+        freq:        form.freq        || undefined,
+        transponder: form.transponder || undefined,
+        buttons:     form.buttons !== "" ? parseInt(form.buttons) : undefined,
+        note:        form.note        || undefined,
+        lien:        form.lien        || undefined,
+      }
+    }));
+    setEditing(false);
+  };
+
+  return (
+    <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"#f0f3fa" }}>
+
+      {/* BOUTON MODIFIER */}
+      <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", padding:"8px 12px 0", gap:6 }}>
+        {hasOverride && !editing && (
+          <span style={{ fontSize:9, fontWeight:700, color:"#6c63ff", background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.25)", borderRadius:20, padding:"2px 8px" }}>✎ Modifiée</span>
+        )}
+        {editing ? (
+          <>
+            <button onClick={saveEdit} style={{ padding:"5px 12px", borderRadius:8, border:"none", background:"linear-gradient(135deg,#6c63ff,#00d4ff)", color:"#fff", fontWeight:700, fontSize:11, cursor:"pointer" }}>✓ Enregistrer</button>
+            <button onClick={() => setEditing(false)} style={{ padding:"5px 10px", borderRadius:8, border:"1px solid rgba(108,99,255,0.2)", background:"transparent", color:"#5a6585", fontSize:11, cursor:"pointer" }}>Annuler</button>
+          </>
+        ) : (
+          <button onClick={() => setEditing(true)} style={{ padding:"5px 11px", borderRadius:8, border:"1px solid rgba(108,99,255,0.2)", background:"rgba(108,99,255,0.07)", color:"#6c63ff", fontSize:11, fontWeight:700, cursor:"pointer" }}>✏️ Modifier</button>
+        )}
+      </div>
+
+      {/* FORMULAIRE D'ÉDITION */}
+      {editing && (
+        <div style={{ margin:"8px 12px", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.2)", padding:"12px 14px", display:"flex", flexDirection:"column", gap:8 }}>
+          <div style={{ fontSize:10, fontWeight:800, color:"#6c63ff", textTransform:"uppercase", letterSpacing:1, marginBottom:2 }}>Modifier — {entry.ref}</div>
+          {[
+            ["blade",       "🔑 Lame",         "ex: VA2"],
+            ["freq",        "📡 Fréquence",    "ex: 433MHz"],
+            ["transponder", "🔐 Transpondeur", "ex: PCF7936"],
+            ["buttons",     "🔢 Boutons",      "ex: 3"],
+            ["lien",        "🔗 Lien achat",   "https://..."],
+            ["note",        "📝 Note",         "Remarque terrain"],
+          ].map(([key, label, placeholder]) => (
+            <div key={key}>
+              <div style={{ fontSize:10, color:"#5a6585", fontWeight:600, marginBottom:2 }}>{label}</div>
+              <input value={form[key]} onChange={e => setForm(p => ({...p, [key]: e.target.value}))}
+                placeholder={placeholder}
+                style={{ width:"100%", background:"#f0f3fa", border:"1px solid rgba(108,99,255,0.2)", borderRadius:8, padding:"7px 10px", color:"#1a1d2e", fontSize:12, outline:"none", boxSizing:"border-box" }} />
+            </div>
+          ))}
+          {hasOverride && (
+            <button onClick={() => { setSilcaOverrides(prev => { const n={...prev}; delete n[entry.ref]; return n; }); setForm({ blade: entry.blade||"", freq: entry.freq||"", transponder: entry.transponder||"", buttons: entry.buttons!=null?String(entry.buttons):"", note: entry.note||"", lien:"" }); setEditing(false); }}
+              style={{ padding:"6px", borderRadius:8, border:"1px solid rgba(255,71,87,0.25)", background:"rgba(255,71,87,0.06)", color:"#ff4757", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+              🔄 Remettre les données catalogue
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* BLOC DÉCISION RAPIDE */}
+      <div style={{ margin:"10px 12px 0", background:"#1a1f35", borderRadius:14, padding:"12px 14px", border:"1px solid rgba(108,99,255,0.3)" }}>
+        <div style={{ fontSize:9, fontWeight:800, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:10 }}>⚡ Décision rapide</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:7 }}>
+          <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>📅 Années</div>
+            <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{yMin ? `${yMin}${yMax && yMax !== yMin ? `–${yMax}` : "+"}` : "—"}</div>
+          </div>
+          <div style={{ background: isML ? "rgba(108,99,255,0.2)" : "rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:`1px solid ${isML ? "rgba(108,99,255,0.4)" : "rgba(255,255,255,0.08)"}` }}>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔑 Type</div>
+            <div style={{ fontSize:13, fontWeight:800, color: isML ? "#a78bfa" : "#fff" }}>{isML ? "ML" : "NON ML"}</div>
+          </div>
+          <div style={{ background: diffC + "22", borderRadius:9, padding:"8px 9px", border:`1px solid ${diffC}44` }}>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>⚠ Risque</div>
+            <div style={{ fontSize:13, fontWeight:800, color: diffC }}>{diff}</div>
+          </div>
+          <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>⏱ Temps</div>
+            <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{temps}</div>
+          </div>
+          <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔌 Méthode</div>
+            <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{methode}</div>
+          </div>
+          <div style={{ background: (isAES || isBSI) ? "rgba(232,160,32,0.2)" : "rgba(0,184,122,0.12)", borderRadius:9, padding:"8px 9px", border:`1px solid ${(isAES || isBSI) ? "rgba(232,160,32,0.4)" : "rgba(0,184,122,0.3)"}` }}>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔐 Chiffrement</div>
+            <div style={{ fontSize:12, fontWeight:800, color: (isAES || isBSI) ? "#e8a020" : "#00b87a" }}>{isAES ? "AES" : isBSI ? "BSI" : "Simple"}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ALERTES MÉTIER */}
+      {(isRare || isAES || isBSI) && (
+        <div style={{ margin:"9px 12px 0", display:"flex", flexDirection:"column", gap:5 }}>
+          {isRare && <div style={{ padding:"8px 12px", background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.25)", borderRadius:10, fontSize:11, fontWeight:600, color:"#cc2222", display:"flex", alignItems:"center", gap:7 }}>🔴 Très rare — confirmer {d.transponder || "l'ID"} par lecture avant commande</div>}
+          {isAES  && <div style={{ padding:"8px 12px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:10, fontSize:11, fontWeight:600, color:"#7a4f00", display:"flex", alignItems:"center", gap:7 }}>⚠️ Attention AES — outil Pro compatible requis</div>}
+          {isBSI && !isAES && <div style={{ padding:"8px 12px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:10, fontSize:11, fontWeight:600, color:"#7a4f00", display:"flex", alignItems:"center", gap:7 }}>⚠️ BSI / CAS — logiciel à jour obligatoire</div>}
+        </div>
+      )}
+
+      {/* BADGES TECHNIQUES */}
+      <div style={{ padding:"9px 12px 0", display:"flex", gap:5, flexWrap:"wrap" }}>
+        {d.transponder && <span style={{ fontSize:10, fontWeight:700, color:"#6c63ff", background:"rgba(108,99,255,0.09)", border:"1px solid rgba(108,99,255,0.22)", borderRadius:20, padding:"3px 10px" }}>{d.transponder}</span>}
+        {d.blade       && <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{d.blade}</span>}
+        {d.freq        && <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{d.freq}</span>}
+        <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{temps}</span>
+      </div>
+
+      {/* VARIANTES COMPATIBLES */}
+      <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+        <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>🚗 Variantes compatibles</div>
+        {entry.applications.map((a, i) => (
+          <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 13px", borderBottom: i < entry.applications.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
+            <span style={{ fontSize:13, fontWeight:600, color:"#1a1d2e" }}>{a.make} {a.model}</span>
+            {(a.from || a.to) && <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.08)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>{a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* TECHNIQUE */}
+      <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+        <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", display:"flex", alignItems:"center", gap:6 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+          <span style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>Technique</span>
+        </div>
+        {d.transponder && <Row label="ID transpondeur" value={d.transponder} color="#6c63ff" bold/>}
+        {d.transponder && d.transponder.match(/PCF\w+/) && <Row label="PCF" value={d.transponder.match(/PCF\w+/)[0]} color="#6c63ff"/>}
+        {d.freq        && <Row label="Fréquence" value={d.freq}/>}
+        {d.blade       && <Row label="Lame" value={d.blade}/>}
+        {d.buttons != null && <Row label="Boutons" value={`${d.buttons} bouton${d.buttons > 1 ? "s" : ""}`}/>}
+        <Row label="Type" value={d.type === "P" ? "Carte ML" : d.type === "S" ? "Slot" : "Remote"}/>
+        <Row label="Système" value="UCH"/>
+        <Row label="Mains libres" value={isML ? "✅ Oui" : "Non"} color={isML ? "#00b87a" : "#5a6585"}/>
+        {ov.lien && <Row label="Lien achat" value={<a href={ov.lien} target="_blank" rel="noreferrer" style={{ color:"#0284c7", fontWeight:700 }}>🔗 Voir</a>}/>}
+      </div>
+
+      {/* FABRICANT */}
+      {curOeLinks.length > 0 && (
+        <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+          <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>🏭 Fabricant / Électronique</div>
+          {curOeLinks.map((lnk, li) => (
+            <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 13px", borderBottom: li < curOeLinks.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none", textDecoration:"none" }}>
+              <span style={{ fontSize:12, color:"#0284c7", fontWeight:600, flex:1 }}>🔗 {lnk.label}</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8890aa" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* ÉQUIVALENTS */}
+      {equiv.length > 0 && (
+        <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
+          <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>≡ Équivalents</div>
+          {equiv.map((eq, i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"8px 13px", borderBottom: i < equiv.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
+              <span style={{ fontSize:14, color:"#8890aa" }}>≡</span>
+              <span style={{ fontSize:13, color:"#1a1d2e" }}>{eq}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(ov.note || entry.note) && (
+        <div style={{ margin:"9px 12px 0", padding:"9px 13px", background:"rgba(108,99,255,0.04)", border:"1px solid rgba(108,99,255,0.1)", borderRadius:11 }}>
+          <div style={{ fontSize:10, color:"#5a6585", lineHeight:1.6 }}>ℹ️ {ov.note || entry.note}</div>
+        </div>
+      )}
+      <div style={{ height:12 }}/>
+    </div>
+  );
+}
+
+function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlImport, oeLinksOverrides, silcaOverrides = {}, setSilcaOverrides, S, customItems = [], onDeleteCustom, onUpdateCustom }) {
   const [search, setSearch] = React.useState("");
   const [filterMarque, setFilterMarque] = React.useState("");
   const [openRef, setOpenRef] = React.useState(null);
@@ -1736,144 +1954,14 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
               })()}
 
               {/* ── FICHE DÉTAIL TERRAIN ── */}
-              {isOpen && (() => {
-                const trans   = (entry.transponder || "").toUpperCase();
-                const isAES   = trans.includes("AES") || trans.includes("PCF7961") || trans.includes("HITAG PRO") || trans.includes("ID49") || trans.includes("ID4A");
-                const isBSI   = trans.includes("ID88") || trans.includes("ID50") || ["BMW","Audi","Mercedes"].includes(entry.marque);
-                const isRare  = entry.applications.length <= 1;
-                const isML    = entry.type === "P";
-                const years   = entry.applications.flatMap(a => [a.from, a.to].filter(Boolean));
-                const yMin    = years.length ? Math.min(...years) : null;
-                const yMax    = years.length ? Math.max(...years) : null;
-                const curOeLinks = (oeLinksOverrides && oeLinksOverrides[entry.ref]) ?? entry.oeLinks ?? [];
-                const diff    = isAES ? "Expert" : isBSI ? "Avancé" : "Standard";
-                const diffC   = isAES ? "#ff4757" : isBSI ? "#e8a020" : "#00b87a";
-                const methode = isML ? "OBD" : "Standard";
-                const temps   = isAES ? "45min" : isBSI ? "35min" : entry.buttons >= 3 ? "30min" : "25min";
-                const equiv   = SILCA_DB
-                  .filter(e => e.ref !== entry.ref && e.blade === entry.blade && e.transponder === entry.transponder)
-                  .flatMap(e => e.applications.map(a => `${a.make} ${a.model}${isML ? " ML" : ""}`))
-                  .filter((v, i, a) => a.indexOf(v) === i).slice(0, 5);
-                const Row = ({ label, value, color, bold }) => (
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 14px", borderBottom:"1px solid rgba(108,99,255,0.06)" }}>
-                    <span style={{ fontSize:12, color:"#7a84a0" }}>{label}</span>
-                    <span style={{ fontSize:12, fontWeight: bold ? 800 : 600, color: color || "#1a1d2e" }}>{value}</span>
-                  </div>
-                );
-                return (
-                  <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"#f0f3fa" }}>
-
-                    {/* BLOC DÉCISION RAPIDE */}
-                    <div style={{ margin:"10px 12px 0", background:"#1a1f35", borderRadius:14, padding:"12px 14px", border:"1px solid rgba(108,99,255,0.3)" }}>
-                      <div style={{ fontSize:9, fontWeight:800, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:10 }}>⚡ Décision rapide</div>
-                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:7 }}>
-                        <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
-                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>📅 Années</div>
-                          <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{yMin ? `${yMin}${yMax && yMax !== yMin ? `–${yMax}` : "+"}` : "—"}</div>
-                        </div>
-                        <div style={{ background: isML ? "rgba(108,99,255,0.2)" : "rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:`1px solid ${isML ? "rgba(108,99,255,0.4)" : "rgba(255,255,255,0.08)"}` }}>
-                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔑 Type</div>
-                          <div style={{ fontSize:13, fontWeight:800, color: isML ? "#a78bfa" : "#fff" }}>{isML ? "ML" : "NON ML"}</div>
-                        </div>
-                        <div style={{ background: diffC + "22", borderRadius:9, padding:"8px 9px", border:`1px solid ${diffC}44` }}>
-                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>⚠ Risque</div>
-                          <div style={{ fontSize:13, fontWeight:800, color: diffC }}>{diff}</div>
-                        </div>
-                        <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
-                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>⏱ Temps</div>
-                          <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{temps}</div>
-                        </div>
-                        <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:9, padding:"8px 9px", border:"1px solid rgba(255,255,255,0.08)" }}>
-                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔌 Méthode</div>
-                          <div style={{ fontSize:13, fontWeight:800, color:"#fff" }}>{methode}</div>
-                        </div>
-                        <div style={{ background: (isAES || isBSI) ? "rgba(232,160,32,0.2)" : "rgba(0,184,122,0.12)", borderRadius:9, padding:"8px 9px", border:`1px solid ${(isAES || isBSI) ? "rgba(232,160,32,0.4)" : "rgba(0,184,122,0.3)"}` }}>
-                          <div style={{ fontSize:9, color:"rgba(255,255,255,0.45)", marginBottom:3 }}>🔐 Chiffrement</div>
-                          <div style={{ fontSize:12, fontWeight:800, color: (isAES || isBSI) ? "#e8a020" : "#00b87a" }}>{isAES ? "AES" : isBSI ? "BSI" : "Simple"}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* ALERTES MÉTIER */}
-                    {(isRare || isAES || isBSI) && (
-                      <div style={{ margin:"9px 12px 0", display:"flex", flexDirection:"column", gap:5 }}>
-                        {isRare && <div style={{ padding:"8px 12px", background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.25)", borderRadius:10, fontSize:11, fontWeight:600, color:"#cc2222", display:"flex", alignItems:"center", gap:7 }}>🔴 Très rare — confirmer {entry.transponder || "l'ID"} par lecture avant commande</div>}
-                        {isAES  && <div style={{ padding:"8px 12px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:10, fontSize:11, fontWeight:600, color:"#7a4f00", display:"flex", alignItems:"center", gap:7 }}>⚠️ Attention AES — outil Pro compatible requis</div>}
-                        {isBSI && !isAES && <div style={{ padding:"8px 12px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.28)", borderRadius:10, fontSize:11, fontWeight:600, color:"#7a4f00", display:"flex", alignItems:"center", gap:7 }}>⚠️ BSI / CAS — logiciel à jour obligatoire</div>}
-                      </div>
-                    )}
-
-                    {/* BADGES TECHNIQUES */}
-                    <div style={{ padding:"9px 12px 0", display:"flex", gap:5, flexWrap:"wrap" }}>
-                      {entry.transponder && <span style={{ fontSize:10, fontWeight:700, color:"#6c63ff", background:"rgba(108,99,255,0.09)", border:"1px solid rgba(108,99,255,0.22)", borderRadius:20, padding:"3px 10px" }}>{entry.transponder}</span>}
-                      {entry.blade       && <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{entry.blade}</span>}
-                      {entry.freq        && <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{entry.freq}</span>}
-                      <span style={{ fontSize:10, fontWeight:700, color:"#5a6585", background:"rgba(90,101,133,0.07)", border:"1px solid rgba(90,101,133,0.18)", borderRadius:20, padding:"3px 10px" }}>{temps}</span>
-                    </div>
-
-                    {/* VARIANTES COMPATIBLES */}
-                    <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                      <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>🚗 Variantes compatibles</div>
-                      {entry.applications.map((a, i) => (
-                        <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 13px", borderBottom: i < entry.applications.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
-                          <span style={{ fontSize:13, fontWeight:600, color:"#1a1d2e" }}>{a.make} {a.model}</span>
-                          {(a.from || a.to) && <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.08)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>{a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}</span>}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* TECHNIQUE */}
-                    <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                      <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", display:"flex", alignItems:"center", gap:6 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-                        <span style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>Technique</span>
-                      </div>
-                      {entry.transponder && <Row label="ID transpondeur" value={entry.transponder} color="#6c63ff" bold/>}
-                      {entry.transponder && entry.transponder.match(/PCF\w+/) && <Row label="PCF" value={entry.transponder.match(/PCF\w+/)[0]} color="#6c63ff"/>}
-                      {entry.freq        && <Row label="Fréquence" value={entry.freq}/>}
-                      {entry.blade       && <Row label="Lame" value={entry.blade}/>}
-                      {entry.buttons != null && <Row label="Boutons" value={`${entry.buttons} bouton${entry.buttons > 1 ? "s" : ""}`}/>}
-                      <Row label="Type" value={entry.type === "P" ? "Carte ML" : entry.type === "S" ? "Slot" : "Remote"}/>
-                      <Row label="Système" value="UCH"/>
-                      <Row label="Mains libres" value={isML ? "✅ Oui" : "Non"} color={isML ? "#00b87a" : "#5a6585"}/>
-                    </div>
-
-                    {/* FABRICANT */}
-                    {curOeLinks.length > 0 && (
-                      <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                        <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>🏭 Fabricant / Électronique</div>
-                        {curOeLinks.map((lnk, li) => (
-                          <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                            style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 13px", borderBottom: li < curOeLinks.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none", textDecoration:"none" }}>
-                            <span style={{ fontSize:12, color:"#0284c7", fontWeight:600, flex:1 }}>🔗 {lnk.label}</span>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8890aa" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                          </a>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* ÉQUIVALENTS */}
-                    {equiv.length > 0 && (
-                      <div style={{ margin:"9px 12px 0", background:"#fff", borderRadius:13, border:"1px solid rgba(108,99,255,0.1)", overflow:"hidden" }}>
-                        <div style={{ padding:"8px 13px 7px", borderBottom:"1px solid rgba(108,99,255,0.07)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>≡ Équivalents</div>
-                        {equiv.map((eq, i) => (
-                          <div key={i} style={{ display:"flex", alignItems:"center", gap:9, padding:"8px 13px", borderBottom: i < equiv.length - 1 ? "1px solid rgba(108,99,255,0.06)" : "none" }}>
-                            <span style={{ fontSize:14, color:"#8890aa" }}>≡</span>
-                            <span style={{ fontSize:13, color:"#1a1d2e" }}>{eq}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {entry.note && (
-                      <div style={{ margin:"9px 12px 0", padding:"9px 13px", background:"rgba(108,99,255,0.04)", border:"1px solid rgba(108,99,255,0.1)", borderRadius:11 }}>
-                        <div style={{ fontSize:10, color:"#5a6585", lineHeight:1.6 }}>ℹ️ {entry.note}</div>
-                      </div>
-                    )}
-                    <div style={{ height:12 }}/>
-                  </div>
-                );
-              })()}
+              {isOpen && (
+                <SilcaDetail
+                  entry={entry}
+                  oeLinksOverrides={oeLinksOverrides}
+                  silcaOverrides={silcaOverrides}
+                  setSilcaOverrides={setSilcaOverrides}
+                />
+              )}
             </div>
           );
         })}
@@ -2123,6 +2211,7 @@ export default function App() {
   const [settings, setSettings] = useState({ nom: "", tel: "", email: "", adresse: "", siret: "", logo: "" });
   // oeLinksOverrides : { [ref]: [{label, url}, ...] } — remplace/complète les oeLinks du catalogue
   const [oeLinksOverrides, setOeLinksOverrides] = useState({});
+  const [silcaOverrides, setSilcaOverrides] = useState({});
   const [oeOpen, setOeOpen] = useState(false);
   const [statsTab, setStatsTab] = useState("stats");
   const [selectedClient, setSelectedClient] = useState(null);
@@ -2218,6 +2307,7 @@ useEffect(() => {
         if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
         if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
         if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
+        if (all[SILCA_OV_KEY]) setSilcaOverrides(all[SILCA_OV_KEY]);
         setSyncing(false);
         setDataLoaded(true);
       });
@@ -2237,6 +2327,7 @@ useEffect(() => {
         if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
         if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
         if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
+        if (all[SILCA_OV_KEY]) setSilcaOverrides(all[SILCA_OV_KEY]);
       });
     };
     const onVisibility = () => { if (document.visibilityState === "visible") reload(); };
@@ -2256,6 +2347,7 @@ useEffect(() => {
   useEffect(() => { if (user && dataLoaded) dbSet(user.id, INTERV_KEY, interventions); }, [interventions, user, dataLoaded]);
   useEffect(() => { if (user && dataLoaded) dbSet(user.id, SETTINGS_KEY, settings); }, [settings, user, dataLoaded]);
   useEffect(() => { if (user && dataLoaded) dbSet(user.id, OE_LINKS_KEY, oeLinksOverrides); }, [oeLinksOverrides, user, dataLoaded]);
+  useEffect(() => { if (user && dataLoaded) dbSet(user.id, SILCA_OV_KEY, silcaOverrides); }, [silcaOverrides, user, dataLoaded]);
   useEffect(() => { if (user && dataLoaded) dbSet(user.id, CUSTOM_AM_KEY, customAftermarket); }, [customAftermarket, user, dataLoaded]);
 
   // Badge color per category
@@ -3138,6 +3230,13 @@ useEffect(() => {
         showToast("🗑 Fiche supprimée");
       }}
       oeLinksOverrides={oeLinksOverrides}
+      silcaOverrides={silcaOverrides}
+      setSilcaOverrides={setSilcaOverrides}
+      onUpdateCustom={(id, champs) => {
+        setCustomAftermarket(prev => prev.map(p => p.id === id ? {...p, ...champs} : p));
+        setProducts(prev => prev.map(p => p.id === id ? {...p, ...champs} : p));
+        showToast("✅ Fiche mise à jour !");
+      }}
       onAddToStock={(newProd) => {
         setProducts(prev => prev.some(p => p.id === newProd.id) ? prev : [...prev, newProd]);
         setStock(prev => prev[newProd.id] ? prev : { ...prev, [newProd.id]: { qty: 0, seuil: SEUIL_DEFAULT, historique: [], init: false } });
@@ -3208,6 +3307,7 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
             if (all[SETTINGS_KEY]) setSettings(all[SETTINGS_KEY]);
             if (all[CUSTOM_AM_KEY]) setCustomAftermarket(all[CUSTOM_AM_KEY]);
             if (all[OE_LINKS_KEY]) setOeLinksOverrides(all[OE_LINKS_KEY]);
+        if (all[SILCA_OV_KEY]) setSilcaOverrides(all[SILCA_OV_KEY]);
             setSyncing(false);
           });
           showToast("✅ Données actualisées !");
