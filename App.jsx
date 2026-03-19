@@ -196,12 +196,6 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           {p.marque && <span style={{ fontSize: 10, fontWeight: 700, color: "#cc0000", background: "rgba(204,0,0,0.08)", padding: "2px 7px", borderRadius: 5 }}>{p.marque}</span>}
           {p.prox && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#cc0000", padding: "2px 8px", borderRadius: 5 }}>🔒 Proximité</span>}
         </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, marginBottom: 8 }}>
-          {p.type && <span style={{ fontSize: 10, fontWeight: 800, color: "#6c63ff", background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.3)", padding: "2px 8px", borderRadius: 5 }}>{p.type}</span>}
-          {p.ref && <span style={{ fontSize: 10, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "2px 9px", borderRadius: 5 }}>{p.ref}</span>}
-          {p.marque && <span style={{ fontSize: 10, fontWeight: 700, color: "#cc0000", background: "rgba(204,0,0,0.08)", padding: "2px 7px", borderRadius: 5 }}>{p.marque}</span>}
-          {p.prox && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#cc0000", padding: "2px 8px", borderRadius: 5 }}>🔒 Proximité</span>}
-        </div>
 
         {/* Véhicules compatibles */}
         {p.applications && p.applications.length > 0 && (
