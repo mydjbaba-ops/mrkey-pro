@@ -9,8 +9,8 @@ export default async function handler(req, res) {
   try {
     const pageRes = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15",
+        "Accept": "text/html,application/xhtml+xml",
         "Accept-Language": "fr-FR,fr;q=0.9",
       }
     });
@@ -41,11 +41,11 @@ export default async function handler(req, res) {
     const titreEtTexte = titre + " " + texte.slice(0, 3000);
     const marque = MARQUES.find(m => titreEtTexte.toLowerCase().includes(m.toLowerCase())) || "";
 
-    // Modèles — extraction STRICTE depuis section compatibilité HTML ou titre uniquement
-    // INTERDIT : liste interne, inférence, déduction depuis texte global
+    // Modèles — extraction STRICTE
+    // 1. Section HTML explicite (tableau compatibilité)
+    // 2. Fallback : titre uniquement, TOUS les modèles listés après "pour [Marque]"
+    // Jamais de liste interne, jamais d'inférence
     let modeles = "";
-
-    // 1. Section compatibilité explicite dans le HTML
     const compatPatterns = [
       /(?:convient aux mod[eè]les suivants|compatible avec les mod[eè]les suivants|v[eé]hicules compatibles|la cl[eé][^<]{0,80}convient|fits the following|suitable for)[\s\S]{0,8000}?<\/(?:table|div|ul|section)>/i,
       /<table[\s\S]{0,300}?(?:marque|make|mod[eè]le|model|ann[eé]e|year)[\s\S]{0,8000}?<\/table>/i,
@@ -68,20 +68,29 @@ export default async function handler(req, res) {
       modeles = [...modelesSet].join(", ");
     }
 
-    // 2. Fallback : titre uniquement (source fiable)
-    // Ex: "Clé pour Audi A4 Q5 A5 A6 PCF7945..." → "Audi A4, Audi Q5, Audi A5, Audi A6"
+    // Fallback titre — extrait TOUS les modèles après "pour [Marque] M1 M2 M3..."
     if (!modeles && titre) {
-      const titreClean = titre.replace(/pcf\d+|\d+mhz|\d+hz|[0-9]{5,}/gi, "").trim();
-      const pourMatch = titreClean.match(/pour\s+([A-Za-zÀ-ÿ]+)\s+(.+?)(?:\s+(?:pcf|id\d|\d{3}mhz|avec|clé|telecommande|key|remote)|$)/i);
+      // Nettoyer le titre des refs techniques (PCF, fréquences, numéros longs)
+      const titreClean = titre
+        .replace(/pcf\d+/gi, "").replace(/\d{3,}mhz/gi, "").replace(/\d{3,}hz/gi, "")
+        .replace(/\d{5,}/g, "").replace(/hitag[^\s]*/gi, "").replace(/aes/gi, "").replace(/keyless[^\s]*/gi, "")
+        .replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+      // Pattern : "pour Marque M1 M2 M3 ..." jusqu'à une rupture technique
+      const pourMatch = titreClean.match(/pour\s+([A-ZÀ-Ÿa-zà-ÿ][a-zà-ÿ]+)\s+((?:[A-Z][A-Za-z0-9-]{1,8}\s*)+)/i);
       if (pourMatch) {
-        const marqueDetectee = pourMatch[1];
-        const modelePart = pourMatch[2];
-        const mods = modelePart.split(/[,\s]+/).map(m => m.trim()).filter(m => m.length >= 2 && m.length <= 8 && /^[A-Za-z0-9-]+$/.test(m));
-        if (mods.length > 0) {
-          modeles = mods.map(m => marqueDetectee + " " + m).join(", ");
-        }
+        const marqueDetectee = pourMatch[1].charAt(0).toUpperCase() + pourMatch[1].slice(1);
+        // Extraire chaque token modèle (2-8 chars, alphanum)
+        const mods = pourMatch[2].trim().split(/\s+/).map(m => m.trim())
+          .filter(m => m.length >= 2 && m.length <= 8 && /^[A-Za-z0-9-]+$/.test(m));
+        if (mods.length > 0) modeles = mods.map(m => marqueDetectee + " " + m).join(", ");
       }
     }
+
+    // Retourner l'ID transpondeur séparé du PCF
+    const idMatch = texte.match(/\b(id4[0-9a-f]|id46|id47|id48|id4b|id4d|id33|id11|id12|id13|id60|id61|id63|id70|id72|id82|id83|id88|id94|id95|megamos|crypto|hitag\s?(?:2|aes|pro)?|ti\s?\d+)\b/i);
+    const id_transpondeur = idMatch ? idMatch[0].toUpperCase().replace(/\s/g, "") : "";
+
+    if (!modeles) modeles = "";
 
     // Caractéristiques techniques
     const freqMatch = texte.match(/(\d{3}[\.,]\d+\s*mhz|\d{3}\s*mhz)/i);
@@ -93,7 +102,7 @@ export default async function handler(req, res) {
     const pcfMatch = texte.match(/\b(pcf\s?\d{4,})\b/i);
     const pcf = pcfMatch ? pcfMatch[0].toUpperCase().replace(/\s/g, "") : "";
 
-    const lameMatch = texte.match(/\b(va\d+|hu\d+|huf\d+|toy\d+|sip\d+|nf\d+|vac\d+|hy\d+|rn\d+|df\d+|ya\d+|hu127|hu100|hu92|hu66|hu83|hu64)\b/i);
+    const lameMatch = texte.match(/\b(va\d+|hu\d+|sip\d+|nf\d+|hu83|hu66|hu64|hu100|hu92|sip22|ft22|toy\d+)\b/i);
     const lame = lameMatch ? lameMatch[0].toUpperCase() : "";
 
     const pileMatch = texte.match(/\b(cr2032|cr2016|cr1620|cr1616)\b/i);
@@ -111,8 +120,7 @@ export default async function handler(req, res) {
     else if (texte.includes("coque") || texte.includes("boitier vide")) type = "Coque";
     else if (texte.includes("transpondeur chip") || texte.includes("puce seule")) type = "Transpondeur";
 
-    const prixMatch = html.match(/class=["'][^"']*price[^"']*["'][^>]*>[\s\S]{0,100}?(\d+[.,]\d{2})\s*€/i) ||
-                      html.match(/(\d+[.,]\d{2})\s*€/);
+    const prixMatch = html.match(/(\d+[.,]\d{2})\s*€/);
     const prix = prixMatch ? parseFloat(prixMatch[1].replace(",", ".")) : 0;
 
     const urlParts = url.split("/").filter(Boolean);
@@ -168,7 +176,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       nom: titre || "Produit importé",
       ref, prix, marque, type, freq, transpondeur, pcf,
-      modeles, lame, pile, mainLibre, boutons, image, fiabilite,
+      modeles, lame, pile, mainLibre, boutons, image, id_transpondeur, fiabilite,
       statut,
       doublonId:  doublonExistant?.id || null,
       doublonNom: doublonExistant?.nom || null,
