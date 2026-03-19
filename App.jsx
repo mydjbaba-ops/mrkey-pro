@@ -1765,7 +1765,7 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
 }
 
 function UrlProductImport({ onProductCreated, onClose }) {
-  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "" };
+  const empty = { nom: "", ref: "", marque: "", modeles: "", prix: "", type: "Clé", freq: "", transpondeur: "", lame: "", lien: "", lien_achat: "" };
   const [form, setForm] = React.useState(empty);
   const [loading, setLoading] = React.useState(false);
   const [analysed, setAnalysed] = React.useState(false);
@@ -1824,7 +1824,10 @@ function UrlProductImport({ onProductCreated, onClose }) {
       emoji: "🔑",
       image: form.image || FALLBACK_IMG,
       lien: form.lien.trim(),
-      oeLinks: form.lien.trim() ? [{ label: "Voir la page produit", url: form.lien.trim() }] : [],
+      lien_achat: form.lien_achat.trim(),
+      oeLinks: form.lien_achat.trim()
+        ? [{ label: "Acheter chez MK3", url: form.lien_achat.trim() }]
+        : [],
     };
     onProductCreated(newProd);
   };
@@ -1929,6 +1932,17 @@ function UrlProductImport({ onProductCreated, onClose }) {
         <div style={row}>
           <label style={lbl}>Pile</label>
           <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
+        </div>
+
+        <div style={row}>
+          <label style={lbl}>🛒 Lien d'achat MK3</label>
+          <input
+            value={form.lien_achat || ""}
+            onChange={e => set("lien_achat", e.target.value)}
+            placeholder="https://mk3.fr/produit/..."
+            style={inp}
+            inputMode="url"
+          />
         </div>
 
         {/* Champ image */}
