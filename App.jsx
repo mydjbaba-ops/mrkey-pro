@@ -1900,8 +1900,8 @@ function UrlProductImport({ onProductCreated, onClose }) {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <div style={row}>
-            <label style={lbl}>Référence / SKU</label>
-            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: VA2-433-ID46" style={inp} />
+            <label style={lbl}>Numéros de pièce</label>
+            <input value={form.ref} onChange={e => set("ref", e.target.value)} placeholder="ex: 8T0959754" style={inp} />
           </div>
           <div style={row}>
             <label style={lbl}>Prix d'achat (€)</label>
@@ -1929,6 +1929,14 @@ function UrlProductImport({ onProductCreated, onClose }) {
             <label style={lbl}>ID transpondeur</label>
             <input value={form.id_transpondeur || ""} onChange={e => set("id_transpondeur", e.target.value)} placeholder="ex: ID46, ID47, ID4A" style={inp} />
           </div>
+          <div style={row}>
+            <label style={lbl}>Pile</label>
+            <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
+          </div>
+          <div style={row}>
+            <label style={lbl}>Nombre de boutons</label>
+            <input type="number" min="1" max="6" value={form.boutons || ""} onChange={e => set("boutons", e.target.value)} placeholder="ex: 3" style={inp} />
+          </div>
         </div>
 
         <div style={row}>
@@ -1939,11 +1947,6 @@ function UrlProductImport({ onProductCreated, onClose }) {
         <div style={row}>
           <label style={lbl}>Lame</label>
           <input value={form.lame} onChange={e => set("lame", e.target.value)} placeholder="ex: VA2" style={inp} />
-        </div>
-
-        <div style={row}>
-          <label style={lbl}>Pile</label>
-          <input value={form.pile || ""} onChange={e => set("pile", e.target.value)} placeholder="ex: CR2032" style={inp} />
         </div>
 
         <div style={row}>
