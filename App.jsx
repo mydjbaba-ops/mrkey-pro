@@ -2167,9 +2167,6 @@ useEffect(() => {
 
 
       <div style={S.sectionTitle}>Accès rapide</div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
         <div onClick={() => setPage("stock")}
@@ -2190,9 +2187,6 @@ useEffect(() => {
           <div style={{ fontSize: 20, marginBottom: 6 }}>👤</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Clients</div>
           <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{clients.length} client{clients.length !== 1 ? "s" : ""}</div>
-        </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Xhorse</div>
-          <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>Catalogue VVDI</div>
         </div>
         <div onClick={() => setPage("devis")}
           style={{ background: "linear-gradient(135deg,rgba(0,212,255,0.06),rgba(108,99,255,0.04))", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(0,212,255,0.2)", cursor: "pointer" }}>
