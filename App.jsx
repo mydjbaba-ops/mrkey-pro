@@ -91,7 +91,7 @@ const KeyIcon = () => <Icon d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5
 // ============================================================
 // =================== DETAIL PAGE COMPONENT =================
 // ============================================================
-function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catColor, lienLabel, SEUIL_DEFAULT, onDelete, onUpdatePrix, onUpdateNom, onUpdateImage }) {
+function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catColor, lienLabel, SEUIL_DEFAULT, onDelete, onUpdatePrix, onUpdateNom, onUpdateImage, onUpdateChamps }) {
   const qtyRef = useRef();
   const seuilRef = useRef();
   const prixRef = useRef();
@@ -103,6 +103,17 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   const [editingNom, setEditingNom] = useState(false);
   const [editingPrix, setEditingPrix] = useState(false);
   const [editingImage, setEditingImage] = useState(false);
+  const [editingChamps, setEditingChamps] = useState(false);
+  const [champsForm, setChampsForm] = useState({
+    lame: p.lame || "",
+    boutons: p.buttons || p.boutons || "",
+    freq: p.freq || p.frequence || "",
+    transpondeur: p.transpondeur || "",
+    pile: p.pile || "",
+    modeles: p.modeles || "",
+    notes: p.notes || "",
+    lien: p.lien || "",
+  });
   const [tab, setTab] = useState("infos");
 
   const s = stock[p.id];
@@ -349,6 +360,69 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
             )}
           </div>
         )}
+
+        {/* ── Caractéristiques & Lien ── */}
+        <div style={{ background: "#e8edf8", borderRadius: 14, padding: 14, marginBottom: 12, border: "1px solid rgba(108,99,255,0.12)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: editingChamps ? 12 : 0 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1 }}>Caractéristiques & Lien</div>
+            {!editingChamps && <button onClick={() => setEditingChamps(true)} style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 8, padding: "6px 10px", color: "#6c63ff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✏️ Modifier</button>}
+          </div>
+          {editingChamps ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {[
+                ["lame",         "🔑 Lame",          "ex: VA2, HU100"],
+                ["boutons",      "🔢 Boutons",        "ex: 3"],
+                ["freq",         "📡 Fréquence",      "ex: 433MHz"],
+                ["transpondeur", "🔐 Transpondeur",   "ex: PCF7936"],
+                ["pile",         "🔋 Pile",           "ex: CR2032"],
+                ["modeles",      "🚗 Modèles",        "ex: 308, 3008 2013-2020"],
+                ["notes",        "📝 Notes",          "Informations complémentaires"],
+                ["lien",         "🔗 Lien fournisseur","https://..."],
+              ].map(([key, label, placeholder]) => (
+                <div key={key}>
+                  <div style={{ fontSize: 10, color: "#5a6585", fontWeight: 600, marginBottom: 3 }}>{label}</div>
+                  <input
+                    value={champsForm[key]}
+                    onChange={e => setChampsForm(prev => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    style={{ width: "100%", background: "#fff", border: "1px solid rgba(108,99,255,0.25)", borderRadius: 9, padding: "8px 11px", color: "#1a1d2e", fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                <button onClick={() => {
+                  if (onUpdateChamps) onUpdateChamps(p.id, champsForm);
+                  setEditingChamps(false);
+                  showFlash("champs");
+                }} style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>✓ Enregistrer</button>
+                <button onClick={() => setEditingChamps(false)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              {flash === "champs" ? (
+                <span style={{ fontSize: 12, color: "#4ade80", fontWeight: 700 }}>✓ Caractéristiques mises à jour !</span>
+              ) : (
+                [
+                  champsForm.lame         && ["Lame",         champsForm.lame],
+                  champsForm.boutons      && ["Boutons",      champsForm.boutons],
+                  champsForm.freq         && ["Fréq.",        champsForm.freq],
+                  champsForm.transpondeur && ["Transp.",      champsForm.transpondeur],
+                  champsForm.pile         && ["Pile",         champsForm.pile],
+                  champsForm.modeles      && ["Modèles",      champsForm.modeles],
+                  champsForm.notes        && ["Notes",        champsForm.notes],
+                  champsForm.lien         && ["Lien",         "✓ défini"],
+                ].filter(Boolean).map(([l, v]) => (
+                  <span key={l} style={{ fontSize: 10, background: "#dde3f2", borderRadius: 6, padding: "3px 8px", color: "#1a1d2e" }}>
+                    <span style={{ color: "#5a6585", marginRight: 3 }}>{l}</span>{v}
+                  </span>
+                ))
+              )}
+              {!flash && Object.values(champsForm).every(v => !v) && (
+                <span style={{ fontSize: 11, color: "#5a6585" }}>Aucune caractéristique renseignée</span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── Stock ── */}
         <div style={{ background: "#e8edf8", borderRadius: 14, padding: 16, border: "1px solid rgba(108,99,255,0.12)" }}>
@@ -3201,6 +3275,33 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
               setProducts(prev => prev.map(p => p.id === id ? {...p, image} : p));
               setSelectedProduct(prev => prev ? {...prev, image} : prev);
               showToast("✅ Photo mise à jour !");
+            }}
+            onUpdateChamps={(id, champs) => {
+              setProducts(prev => prev.map(p => p.id === id ? {
+                ...p,
+                lame: champs.lame || p.lame,
+                boutons: champs.boutons || p.boutons,
+                buttons: champs.boutons || p.buttons,
+                freq: champs.freq || p.freq,
+                transpondeur: champs.transpondeur || p.transpondeur,
+                pile: champs.pile || p.pile,
+                modeles: champs.modeles || p.modeles,
+                notes: champs.notes || p.notes,
+                lien: champs.lien || p.lien,
+              } : p));
+              setSelectedProduct(prev => prev && prev.id === id ? {
+                ...prev,
+                lame: champs.lame || prev.lame,
+                boutons: champs.boutons || prev.boutons,
+                buttons: champs.boutons || prev.buttons,
+                freq: champs.freq || prev.freq,
+                transpondeur: champs.transpondeur || prev.transpondeur,
+                pile: champs.pile || prev.pile,
+                modeles: champs.modeles || prev.modeles,
+                notes: champs.notes || prev.notes,
+                lien: champs.lien || prev.lien,
+              } : prev);
+              showToast("✅ Caractéristiques mises à jour !");
             }}
           />
         )}
