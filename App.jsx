@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { supabase, dbSet, dbGetAll } from "./src/supabase";
 import AuthScreen, { ResetPasswordScreen } from "./src/AuthScreen";
-import BaseVehicule from "./components/BaseVehicule";
 
 
 
@@ -408,9 +407,7 @@ const XHORSE_BADGE_COLORS = {
 // ============================================================
 // =================== VEHICULE DATABASE ======================
 // ============================================================
-import { VEHICULE_DB } from "./silcaData.js";
 
-const VEHICULE_MARQUES = [...new Set(VEHICULE_DB.map(v => v.marque))].sort();
 
 // ============================================================
 // =================== SILCA CATALOGUE DB =====================
@@ -1060,503 +1057,6 @@ function SilcaTab({ onAddToStock, stock, bgCard, accent, textDim, textMid, oeLin
   );
 }
 
-function RechercheVehicule({ products, stock, setSelectedProduct, setPage, setIntervFormProduct, initialSearch, initialTab, onAddToStock, oeLinksOverrides, setOeLinksOverrides, onShowAddProduit }) {
-  const [marque, setMarque] = useState("");
-  const [modele, setModele] = useState("");
-  const [annee, setAnnee] = useState("");
-  const [result, setResult] = useState(null);
-  const [freeSearch, setFreeSearch] = useState(initialSearch || "");
-  const [activeTab, setActiveTab] = useState("xhorse");
-  const [xhorseMarque, setXhorseMarque] = useState("");
-  const [xhorseModele, setXhorseModele] = useState("");
-  const [keyPhoto, setKeyPhoto] = useState(null);
-  const [keyPhotoLoading, setKeyPhotoLoading] = useState(false);
-  const [stockAdded, setStockAdded] = useState({});
-  const xhorseMarques = useMemo(() => Object.keys(XHORSE_DB).sort(), []);
-  const xhorseModeles = useMemo(() => {
-    if (!xhorseMarque || !XHORSE_DB[xhorseMarque]) return [];
-    return Object.keys(XHORSE_DB[xhorseMarque].models).sort();
-  }, [xhorseMarque]);
-
-  // Recherche de photo de clé via l'API Anthropic avec web_search
-  async function fetchKeyPhoto(marqueAuto, modeleAuto) {
-    setKeyPhotoLoading(true);
-    setKeyPhoto(null);
-    try {
-      const query = modeleAuto
-        ? `${marqueAuto} ${modeleAuto} car key remote photo`
-        : `${marqueAuto} car key remote photo`;
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{
-            role: "user",
-            content: `Search for a clear product photo of a ${marqueAuto}${modeleAuto ? " " + modeleAuto : ""} car key remote on a white background. Return ONLY a JSON object with this exact format, no other text: {"imageUrl": "URL_OF_THE_BEST_IMAGE", "source": "website_name"}`
-          }]
-        })
-      });
-      const data = await response.json();
-      const textBlock = data.content?.find(b => b.type === "text");
-      if (textBlock) {
-        try {
-          const clean = textBlock.text.replace(/```json|```/g, "").trim();
-          const jsonMatch = clean.match(/\{[^{}]*"imageUrl"[^{}]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed.imageUrl) setKeyPhoto(parsed.imageUrl);
-          }
-        } catch (e) {}
-      }
-    } catch (e) {}
-    setKeyPhotoLoading(false);
-  }
-
-  const modeles = useMemo(() => {
-    if (!marque) return [];
-    return [...new Set(VEHICULE_DB.filter(v => v.marque === marque).map(v => v.modele))].sort();
-  }, [marque]);
-
-  const annees = useMemo(() => {
-    if (!marque || !modele) return [];
-    const veh = VEHICULE_DB.find(v => v.marque === marque && v.modele === modele);
-    if (!veh) return [];
-    const list = [];
-    for (let y = veh.debut; y <= (veh.fin || 2025); y++) list.push(y);
-    return list;
-  }, [marque, modele]);
-
-  const freeResults = useMemo(() => {
-    if (!freeSearch.trim()) return [];
-    const q = freeSearch.toLowerCase();
-    return products.filter(function(p) {
-      return p.nom.toLowerCase().includes(q) ||
-        p.ref.toLowerCase().includes(q) ||
-        (p.lame && p.lame.toLowerCase().includes(q)) ||
-        (p.transpondeur && p.transpondeur.toLowerCase().includes(q)) ||
-        (p.marque && p.marque.toLowerCase().includes(q));
-    });
-  }, [freeSearch, products]);
-
-  function handleSearch() {
-    if (!marque || !modele) return;
-    var veh = VEHICULE_DB.find(function(v) {
-      if (v.marque !== marque || v.modele !== modele) return false;
-      if (annee) { var y = parseInt(annee); return y >= v.debut && y <= (v.fin || 2025); }
-      return true;
-    });
-    if (!veh) { setResult(null); return; }
-    // Créer des produits virtuels depuis la DB véhicule (lame + transpondeur)
-    // + enrichir avec les produits déjà en stock qui correspondent
-    var vehLames = veh.lame.split(/[/,\s]+/).map(function(l) { return l.trim().toUpperCase(); }).filter(Boolean);
-    // Produits déjà en stock qui matchent
-    var inStockMatches = products.filter(function(p) {
-      if (!p.lame) return false;
-      var pl = p.lame.split(/[/,\s]+/).map(function(l) { return l.trim().toUpperCase(); }).filter(Boolean);
-      return vehLames.some(function(vl) { return pl.some(function(pll) { return pll === vl || pll.includes(vl) || vl.includes(pll); }); });
-    });
-    // Produits virtuels depuis la DB (un par lame principale)
-    var virtualProducts = vehLames.map(function(lame) {
-      var existingId = "virt-" + veh.marque.toLowerCase().replace(/[^a-z]/g,"") + "-" + lame.toLowerCase();
-      return {
-        id: existingId,
-        nom: veh.marque + " " + veh.modele + " - Lame " + lame,
-        lame: lame,
-        marqueVehicule: veh.marque,
-        transpondeur: veh.transpondeur,
-        freq: veh.freq || "433 MHz",
-        type: "Clé aftermarket",
-        ref: lame + "-" + veh.marque.replace(/[^A-Za-z]/g,"").toUpperCase().slice(0,4),
-        prix: 0,
-        isVirtual: true,
-        emoji: "🔑",
-      };
-    });
-    // Merge: produits en stock d'abord, puis virtuels non encore en stock
-    var stockIds = inStockMatches.map(function(p) { return p.lame ? p.lame.toUpperCase() : ""; });
-    var newVirtuals = virtualProducts.filter(function(vp) {
-      return !stockIds.some(function(sl) { return sl.includes(vp.lame) || vp.lame.includes(sl); });
-    });
-    setResult({ veh: veh, products: inStockMatches.concat(newVirtuals) });
-  }
-
-  function handleReset() { setMarque(""); setModele(""); setAnnee(""); setResult(null); }
-
-  var accent = "#6c63ff";
-  var bgCard = "#e8edf8";
-  var bgPage = "#c8d0e8";
-  var textMid = "#5a6080";
-  var textDim = "#8890aa";
-  var grad1 = "linear-gradient(135deg,#6c63ff,#00d4ff)";
-
-  var selStyle = {
-    width: "100%", background: bgCard, border: "1px solid rgba(108,99,255,0.2)",
-    borderRadius: 14, padding: "13px 14px", color: "#1a1d2e", fontSize: 14,
-    outline: "none", fontFamily: "'Plus Jakarta Sans',sans-serif",
-    fontWeight: 600, appearance: "none", cursor: "pointer"
-  };
-
-  function renderCard(p) {
-    var s = stock[p.id];
-    var isLow = !s || (!s.init && s.qty <= (s.seuil || 3));
-    var qty = (s && !s.init) ? s.qty : null;
-    var inStock = qty !== null;
-    return (
-      <div key={p.id} style={{ background: bgCard, borderRadius: 18, marginBottom: 10, border: "1px solid " + (isLow ? "rgba(255,71,87,0.3)" : "rgba(108,99,255,0.12)"), overflow: "hidden" }}>
-        <div style={{ display: "flex", cursor: "pointer" }} onClick={function() { setSelectedProduct(p); setPage("detail"); }}>
-          <div style={{ width: 88, height: 88, background: bgPage, flexShrink: 0, overflow: "hidden" }}>
-            {(function() {
-              var img = p.image || getKeyImage(p.lame);
-              return img
-                ? <img src={img} alt={p.lame} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🔑</div>;
-            })()}
-          </div>
-          <div style={{ padding: "10px 12px 10px 8px", flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#1a1d2e", lineHeight: 1.4, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{p.nom}</div>
-            <div style={{ fontSize: 10, color: textDim, marginTop: 4 }}>Lame: {p.lame} · {p.transpondeur}</div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-              {inStock
-                ? <span style={{ fontSize: 13, fontWeight: 900, color: isLow ? "#ff4757" : "#00b87a" }}>{qty} en stock</span>
-                : <span style={{ fontSize: 11, fontWeight: 600, color: textDim }}>Pas encore en stock</span>
-              }
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 6, padding: "8px 10px 10px", borderTop: "1px solid rgba(108,99,255,0.08)" }}>
-          <a href={"https://www.google.com/search?q=" + encodeURIComponent(p.lame + " " + p.marqueVehicule + " cle auto aftermarket") + "&tbm=isch"} target="_blank" rel="noopener noreferrer"
-            style={{ flex: 1, padding: "9px 6px", borderRadius: 10, border: "1px solid rgba(66,133,244,0.3)", background: "rgba(66,133,244,0.08)", color: "#2563eb", fontWeight: 700, fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-            🖼 Photos
-          </a>
-          <a href={"https://www.google.com/search?q=" + encodeURIComponent("cle " + p.lame + " " + p.marqueVehicule + " aftermarket site:mk3.com OR site:aliexpress.com")} target="_blank" rel="noopener noreferrer"
-            style={{ flex: 1, padding: "9px 6px", borderRadius: 10, border: "1px solid rgba(255,167,38,0.3)", background: "rgba(255,167,38,0.08)", color: "#e65c00", fontWeight: 700, fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-            🛒 Acheter
-          </a>
-          {inStock
-            ? <button onClick={function() { setIntervFormProduct(p); }}
-                style={{ flex: 1, padding: "9px 6px", borderRadius: 10, border: "none", background: "rgba(108,99,255,0.12)", color: accent, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
-                + Intervention
-              </button>
-            : <button onClick={function() { onAddToStock && onAddToStock(p); }}
-                style={{ flex: 1, padding: "9px 6px", borderRadius: 10, border: "none", background: grad1, color: "#fff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
-                + Ajouter stock
-              </button>
-          }
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ padding: "16px 16px 110px", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-
-      {/* Bouton ajouter produit */}
-      <button onClick={() => onShowAddProduit && onShowAddProduit()}
-        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,212,255,0.08))", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 16, padding: "12px 16px", marginBottom: 14, cursor: "pointer", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#6c63ff,#00d4ff,transparent)" }} />
-        <div style={{ width: 38, height: 38, borderRadius: 11, background: "linear-gradient(135deg,#6c63ff,#00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>➕</div>
-        <div style={{ flex: 1, textAlign: "left" }}>
-          <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 800, color: "#1a1d2e" }}>Ajouter un produit</div>
-          <div style={{ fontSize: 11, color: "#5a6585", marginTop: 2 }}>Colle l'URL — la fiche se remplit automatiquement</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-        <button onClick={function() { setActiveTab("xhorse"); }}
-          style={{ flex: 1, padding: "11px 8px", borderRadius: 14, border: "1px solid " + (activeTab === "xhorse" ? "#ea580c" : "rgba(234,88,12,0.2)"), background: activeTab === "xhorse" ? "#ea580c" : "transparent", color: activeTab === "xhorse" ? "#fff" : "#ea580c", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-          Xhorse
-        </button>
-        <button onClick={function() { setActiveTab("silca"); }}
-          style={{ flex: 1, padding: "11px 8px", borderRadius: 14, border: "1px solid " + (activeTab === "silca" ? "#c00" : "rgba(204,0,0,0.2)"), background: activeTab === "silca" ? "#cc0000" : "transparent", color: activeTab === "silca" ? "#fff" : "#cc0000", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-          Aftermarket
-        </button>
-      </div>
-
-      {activeTab === "xhorse" && (
-        <div>
-          {/* Sélecteur marque */}
-          <div style={{ position: "relative", marginBottom: 12 }}>
-            <select value={xhorseMarque} onChange={function(e) {
-                var m = e.target.value;
-                setXhorseMarque(m);
-                setXhorseModele("");
-                setKeyPhoto(null);
-                setStockAdded({});
-                if (m) fetchKeyPhoto(m, "");
-              }}
-              style={{ width: "100%", background: bgCard, border: "1px solid rgba(234,88,12,0.3)", borderRadius: 14,
-                padding: "13px 14px", color: xhorseMarque ? "#1a1d2e" : textDim, fontSize: 14,
-                outline: "none", fontWeight: 600, appearance: "none", cursor: "pointer", boxSizing: "border-box" }}>
-              <option value="">Marque automobile...</option>
-              {xhorseMarques.map(function(m) { return <option key={m} value={m}>{m}</option>; })}
-            </select>
-            <div style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#ea580c" }}>▼</div>
-          </div>
-
-          {/* Sélecteur modèle (si la marque est choisie) */}
-          {xhorseMarque && xhorseModeles.filter(m => m !== "").length > 0 && (
-            <div style={{ position: "relative", marginBottom: 12 }}>
-              <select value={xhorseModele} onChange={function(e) {
-                  var mod = e.target.value;
-                  setXhorseModele(mod);
-                  setKeyPhoto(null);
-                  if (mod) fetchKeyPhoto(xhorseMarque, mod);
-                  else fetchKeyPhoto(xhorseMarque, "");
-                }}
-                style={{ width: "100%", background: bgCard, border: "1px solid rgba(234,88,12,0.3)", borderRadius: 14,
-                  padding: "13px 14px", color: "#1a1d2e", fontSize: 14,
-                  outline: "none", fontWeight: 600, appearance: "none", cursor: "pointer", boxSizing: "border-box" }}>
-                <option value="">— Tous les modèles —</option>
-                {xhorseModeles.filter(m => m !== "").map(function(m) { return <option key={m} value={m}>{m}</option>; })}
-              </select>
-              <div style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#ea580c" }}>▼</div>
-            </div>
-          )}
-
-          {/* Bannière photo de clé trouvée sur internet */}
-          {xhorseMarque && (
-            <div style={{ background: bgCard, borderRadius: 16, marginBottom: 12, padding: "12px 14px",
-              border: "1px solid rgba(234,88,12,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
-              {keyPhotoLoading ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
-                  <div style={{ width: 60, height: 60, borderRadius: 10, background: "#dde3f2",
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <div style={{ width: 24, height: 24, border: "3px solid #ea580c", borderTopColor: "transparent",
-                      borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#ea580c" }}>Recherche photo en cours…</div>
-                    <div style={{ fontSize: 11, color: textDim, marginTop: 2 }}>Clé {xhorseMarque}{xhorseModele ? " " + xhorseModele : ""}</div>
-                  </div>
-                </div>
-              ) : keyPhoto ? (
-                <>
-                  <img src={keyPhoto} alt={`Clé ${xhorseMarque}`}
-                    onError={function(e) { e.target.style.display = "none"; }}
-                    style={{ width: 80, height: 80, objectFit: "contain", borderRadius: 10,
-                      background: "#fff", border: "1px solid #eee", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#ea580c", marginBottom: 3 }}>📸 Photo trouvée</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1d2e" }}>Clé {xhorseMarque}{xhorseModele ? " · " + xhorseModele : ""}</div>
-                    <div style={{ fontSize: 10, color: textDim, marginTop: 2 }}>Source internet</div>
-                  </div>
-                  <button onClick={function() { fetchKeyPhoto(xhorseMarque, xhorseModele); }}
-                    style={{ background: "none", border: "1px solid rgba(234,88,12,0.3)", borderRadius: 8,
-                      padding: "6px 10px", color: "#ea580c", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                    🔄
-                  </button>
-                </>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
-                  <div style={{ width: 60, height: 60, borderRadius: 10, background: "#dde3f2",
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 24 }}>🔑</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: textDim }}>Aucune photo trouvée</div>
-                    <div style={{ fontSize: 11, color: textDim }}>Clé {xhorseMarque}{xhorseModele ? " " + xhorseModele : ""}</div>
-                  </div>
-                  <button onClick={function() { fetchKeyPhoto(xhorseMarque, xhorseModele); }}
-                    style={{ background: "none", border: "1px solid rgba(234,88,12,0.3)", borderRadius: 8,
-                      padding: "6px 10px", color: "#ea580c", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                    🔍 Retry
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {xhorseMarque ? (
-            <div>
-              {/* Accordion modèles */}
-              {xhorseModeles.map(function(modele) {
-                var entries = XHORSE_DB[xhorseMarque]?.models[modele] || [];
-                // Filtrer par modèle sélectionné si applicable
-                if (xhorseModele && modele !== "" && modele !== xhorseModele) return null;
-                var open = xhorseModele === modele || modele === "" || xhorseModele === "";
-                if (modele === "") {
-                  return (
-                    <div key="direct" style={{ marginBottom: 8 }}>
-                    {entries.map(function(entry, idx) {
-                      var entryKey = xhorseMarque + "_direct_" + idx;
-                      var alreadyAdded = stockAdded[entryKey];
-                      return (
-                        <div key={idx} style={{ background: "#fff",
-                          border: "1px solid #e8edf8",
-                          borderRadius: 14, marginBottom: 6,
-                          padding: "14px", display: "flex", gap: 12,
-                          alignItems: "flex-start", position: "relative" }}>
-                          {entry.prox && (
-                            <div style={{ position: "absolute", top: 0, right: 0, background: "#cc0000",
-                              color: "#fff", fontSize: 9, fontWeight: 800, padding: "4px 8px",
-                              borderRadius: "0 0 0 8px", letterSpacing: 1 }}>PROX</div>
-                          )}
-                          <img src={keyPhoto || entry.image} alt={entry.nom}
-                            onError={function(e) { e.target.src = entry.image; }}
-                            style={{ width: 72, height: 72, objectFit: "contain", flexShrink: 0,
-                              borderRadius: 8, background: "#f5f5f5", border: "1px solid #eee" }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 800, fontSize: 13, color: "#1a1d2e", marginBottom: 5, lineHeight: 1.35,
-                              paddingRight: entry.prox ? 32 : 0 }}>{entry.nom}</div>
-                            <div style={{ fontSize: 11.5, color: "#5a6080", marginBottom: 2 }}>
-                              Fréquence: <span style={{ fontWeight: 700 }}>{entry.freq}</span>
-                            </div>
-                            {entry.transpondeur && (
-                              <div style={{ fontSize: 11.5, color: "#5a6080", marginBottom: 6 }}>
-                                Transpondeur: <span style={{ fontWeight: 700 }}>{entry.transpondeur}</span>
-                              </div>
-                            )}
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginBottom: 8 }}>
-                              <span style={{ fontSize: 10, color: "#5a6080", fontWeight: 600 }}>Remote:</span>
-                              {entry.remotes.map(function(r) {
-                                return <span key={r} style={{ background: XHORSE_BADGE_COLORS[r] || "#888",
-                                  color: "#fff", fontSize: 9.5, fontWeight: 700,
-                                  padding: "2px 7px", borderRadius: 4 }}>{r}</span>;
-                              })}
-                            </div>
-                            <button onClick={function() {
-                                if (alreadyAdded) return;
-                                var newProd = {
-                                  id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
-                                  nom: entry.nom,
-                                  marque: xhorseMarque,
-                                  modeles: "",
-                                  freq: entry.freq,
-                                  transpondeur: entry.transpondeur || "",
-                                  type: "Xhorse",
-                                  ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + idx,
-                                  prix: 0,
-                                  categorie: "Xhorse",
-                                  emoji: "🔑",
-                                  image: keyPhoto || entry.image,
-                                  remotes: entry.remotes,
-                                  xhorse: entry.remotes.join(", "),
-                                  prox: entry.prox || false,
-                                };
-                                onAddToStock && onAddToStock(newProd);
-                                setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
-                              }}
-                              style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none",
-                                background: alreadyAdded ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)",
-                                color: "#fff", fontWeight: 800, fontSize: 12, cursor: alreadyAdded ? "default" : "pointer" }}>
-                              {alreadyAdded ? "✓ Ajouté au stock" : "+ Ajouter au stock"}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-                } else {
-                  return (
-                    <div key={modele} style={{ marginBottom: 8 }}>
-                      <div onClick={function() { setXhorseModele(open ? "" : modele); }}
-                        style={{ background: open ? "#6ab04c" : bgCard,
-                          borderRadius: open ? "14px 14px 0 0" : 14,
-                          padding: "14px 16px", display: "flex", justifyContent: "space-between",
-                          alignItems: "center", cursor: "pointer" }}>
-                        <span style={{ fontWeight: 700, fontSize: 15, color: open ? "#fff" : "#1a1d2e" }}>{modele}</span>
-                        <span style={{ color: open ? "#fff" : textDim, fontSize: 13 }}>{open ? "Fermer ∨" : "›"}</span>
-                      </div>
-                      {open && entries.map(function(entry, idx) {
-                        var isLast = idx === entries.length - 1;
-                        var entryKey = xhorseMarque + "_" + modele + "_" + idx;
-                        var alreadyAdded = stockAdded[entryKey];
-                        return (
-                          <div key={idx} style={{ background: "#fff",
-                            border: "1px solid #e8edf8", borderTop: "none",
-                            borderRadius: isLast ? "0 0 14px 14px" : 0,
-                            padding: "14px", display: "flex", gap: 12,
-                            alignItems: "flex-start", position: "relative" }}>
-                            {entry.prox && (
-                              <div style={{ position: "absolute", top: 0, right: 0, background: "#cc0000",
-                                color: "#fff", fontSize: 9, fontWeight: 800, padding: "4px 8px",
-                                borderRadius: "0 0 0 8px", letterSpacing: 1 }}>PROX</div>
-                            )}
-                            <img src={keyPhoto || entry.image} alt={entry.nom}
-                              onError={function(e) { e.target.src = entry.image; }}
-                              style={{ width: 72, height: 72, objectFit: "contain", flexShrink: 0,
-                                borderRadius: 8, background: "#f5f5f5", border: "1px solid #eee" }} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 800, fontSize: 13, color: "#1a1d2e", marginBottom: 5, lineHeight: 1.35,
-                                paddingRight: entry.prox ? 32 : 0 }}>{entry.nom}</div>
-                              <div style={{ fontSize: 11.5, color: "#5a6080", marginBottom: 2 }}>
-                                Fréquence: <span style={{ fontWeight: 700 }}>{entry.freq}</span>
-                              </div>
-                              {entry.transpondeur && (
-                                <div style={{ fontSize: 11.5, color: "#5a6080", marginBottom: 6 }}>
-                                  Transpondeur: <span style={{ fontWeight: 700 }}>{entry.transpondeur}</span>
-                                </div>
-                              )}
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginBottom: 8 }}>
-                                <span style={{ fontSize: 10, color: "#5a6080", fontWeight: 600 }}>Remote:</span>
-                                {entry.remotes.map(function(r) {
-                                  return <span key={r} style={{ background: XHORSE_BADGE_COLORS[r] || "#888",
-                                    color: "#fff", fontSize: 9.5, fontWeight: 700,
-                                    padding: "2px 7px", borderRadius: 4 }}>{r}</span>;
-                                })}
-                              </div>
-                              <button onClick={function() {
-                                  if (alreadyAdded) return;
-                                  var newProd = {
-                                    id: "xhorse-" + xhorseMarque.replace(/[^a-zA-Z0-9]/g,"") + "-" + modele.replace(/[^a-zA-Z0-9]/g,"") + "-" + idx + "-" + Date.now(),
-                                    nom: entry.nom,
-                                    marque: xhorseMarque,
-                                    modeles: modele,
-                                    freq: entry.freq,
-                                    transpondeur: entry.transpondeur || "",
-                                    type: "Xhorse",
-                                    ref: "XH-" + xhorseMarque.slice(0,3).toUpperCase() + "-" + modele.slice(0,4).toUpperCase(),
-                                    prix: 0,
-                                    categorie: "Xhorse",
-                                    emoji: "🔑",
-                                    image: keyPhoto || entry.image,
-                                    remotes: entry.remotes,
-                                    xhorse: entry.remotes.join(", "),
-                                    prox: entry.prox || false,
-                                  };
-                                  onAddToStock && onAddToStock(newProd);
-                                  setStockAdded(function(prev) { return { ...prev, [entryKey]: true }; });
-                                }}
-                                style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none",
-                                  background: alreadyAdded ? "#4ade80" : "linear-gradient(135deg,#ea580c,#f97316)",
-                                  color: "#fff", fontWeight: 800, fontSize: 12, cursor: alreadyAdded ? "default" : "pointer" }}>
-                                {alreadyAdded ? "✓ Ajouté au stock" : "+ Ajouter au stock"}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                }
-              })}
-            </div>
-          ) : (
-            <div style={{ textAlign: "center", padding: "48px 20px", color: textDim }}>
-              <div style={{ fontSize: 44, marginBottom: 14 }}>🔑</div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: "#ea580c", marginBottom: 8 }}>Catalogue Xhorse</div>
-              <div style={{ fontSize: 13 }}>App VVDI Mini Key Tool V4.9.2</div>
-              <div style={{ fontSize: 12, marginTop: 6 }}>Sélectionne une marque pour voir<br/>les clés et télécommandes compatibles</div>
-              <div style={{ fontSize: 11, marginTop: 10, color: "#aab8c0" }}>{Object.keys(XHORSE_DB).length} marque(s) indexée(s)</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "silca" && (
-        <SilcaTab onAddToStock={onAddToStock} stock={stock} bgCard={bgCard} accent={accent} textDim={textDim} textMid={textMid} oeLinksOverrides={oeLinksOverrides} setOeLinksOverrides={setOeLinksOverrides} />
-      )}
-
-    </div>
-  );
-}
-
-// ============================================================
-// =================== DEVIS FORM =============================
-// ============================================================
 function DevisForm({ clients, products, onSave, onClose, initial }) {
   const [form, setForm] = React.useState(initial || {
     clientId: "", produitId: "", qty: 1, prixHT: "", note: "",
@@ -2045,50 +1545,140 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                 </div>
               </div>
 
-              {/* ── Détail déplié ── */}
-              {isOpen && (
-                <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "14px 14px 12px", background: "rgba(108,99,255,0.025)" }}>
-                  {/* Titre nb véhicules */}
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#3d4870", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10 }}>
-                    {entry.applications.length} véhicule{entry.applications.length > 1 ? "s" : ""} compatible{entry.applications.length > 1 ? "s" : ""}
+              {/* ── Fiche détail dépliable ── */}
+              {isOpen && (() => {
+                const trans  = (entry.transponder || "").toUpperCase();
+                const isAES  = trans.includes("AES") || trans.includes("PCF7961") || trans.includes("HITAG PRO") || trans.includes("ID49") || trans.includes("ID4A");
+                const isBSI  = trans.includes("ID88") || trans.includes("ID50") || ["BMW","Audi","Mercedes"].includes(entry.marque);
+                const isRare = entry.applications.length <= 1;
+                const isML   = entry.type === "P";
+                const years  = entry.applications.flatMap(a => [a.from, a.to].filter(Boolean));
+                const yMin   = years.length ? Math.min(...years) : null;
+                const yMax   = years.length ? Math.max(...years) : null;
+                const curOeLinks = (oeLinksOverrides && oeLinksOverrides[entry.ref]) ?? entry.oeLinks ?? [];
+                const Row = ({ label, value, color }) => (
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 12px", borderBottom:"1px solid rgba(108,99,255,0.06)" }}>
+                    <span style={{ fontSize:12, color:"#5a6585" }}>{label}</span>
+                    <span style={{ fontSize:12, fontWeight:700, color:color||"#1a1d2e" }}>{value}</span>
                   </div>
-                  {/* Liste véhicules */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 12 }}>
-                    {entry.applications.map((a, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", background: "#e8edf8", borderRadius: 12, border: "1px solid rgba(108,99,255,0.07)" }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>{a.make} {a.model}</span>
-                          {a.chassis && <span style={{ fontSize: 10, color: "#8890aa", marginLeft: 7, fontWeight: 500 }}>{a.chassis}</span>}
-                          {a.note && <span style={{ fontSize: 9, color: "#6c63ff", marginLeft: 6, fontStyle: "italic" }}>{a.note}</span>}
+                );
+                return (
+                  <div style={{ borderTop:"1px solid rgba(108,99,255,0.1)", background:"rgba(108,99,255,0.025)" }}>
+
+                    {/* ── INFOS TERRAIN RAPIDES ── */}
+                    <div style={{ padding:"11px 13px 0", display:"flex", gap:7, flexWrap:"wrap" }}>
+                      {yMin && (
+                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(108,99,255,0.1)", border:"1px solid rgba(108,99,255,0.2)", borderRadius:10, padding:"6px 10px" }}>
+                          <span style={{ fontSize:12 }}>📅</span>
+                          <div>
+                            <div style={{ fontSize:8, fontWeight:700, color:"#5a6585", textTransform:"uppercase", letterSpacing:0.8 }}>Années</div>
+                            <div style={{ fontSize:12, fontWeight:800, color:"#1a1d2e" }}>{yMin}{yMax && yMax !== yMin ? ` – ${yMax}` : "+"}</div>
+                          </div>
                         </div>
-                        {(a.from || a.to) && (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.1)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0, marginLeft: 8 }}>
-                            {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
-                          </span>
-                        )}
+                      )}
+                      <div style={{ display:"flex", alignItems:"center", gap:5, background:isML?"rgba(108,99,255,0.1)":"rgba(90,101,133,0.07)", border:isML?"1px solid rgba(108,99,255,0.25)":"1px solid rgba(90,101,133,0.18)", borderRadius:10, padding:"6px 10px" }}>
+                        <span style={{ fontSize:12 }}>{isML ? "🖐" : "🔑"}</span>
+                        <div>
+                          <div style={{ fontSize:8, fontWeight:700, color:"#5a6585", textTransform:"uppercase", letterSpacing:0.8 }}>Type</div>
+                          <div style={{ fontSize:12, fontWeight:800, color:isML?"#6c63ff":"#1a1d2e" }}>{isML ? "Mains libres" : "Standard"}</div>
+                        </div>
                       </div>
-                    ))}
+                      {(isAES || isBSI) && (
+                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(232,160,32,0.1)", border:"1px solid rgba(232,160,32,0.3)", borderRadius:10, padding:"6px 10px" }}>
+                          <span style={{ fontSize:12 }}>⚠️</span>
+                          <div>
+                            <div style={{ fontSize:8, fontWeight:700, color:"#e8a020", textTransform:"uppercase", letterSpacing:0.8 }}>Risque</div>
+                            <div style={{ fontSize:12, fontWeight:800, color:"#e8a020" }}>{[isAES&&"AES", isBSI&&"BSI"].filter(Boolean).join(" + ")}</div>
+                          </div>
+                        </div>
+                      )}
+                      {isRare && (
+                        <div style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,71,87,0.08)", border:"1px solid rgba(255,71,87,0.25)", borderRadius:10, padding:"6px 10px" }}>
+                          <span style={{ fontSize:12 }}>🔴</span>
+                          <div>
+                            <div style={{ fontSize:8, fontWeight:700, color:"#ff4757", textTransform:"uppercase", letterSpacing:0.8 }}>Fréquence</div>
+                            <div style={{ fontSize:12, fontWeight:800, color:"#ff4757" }}>Rare</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── VÉHICULES COMPATIBLES ── */}
+                    <div style={{ padding:"11px 13px 0" }}>
+                      <div style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2, marginBottom:7 }}>
+                        🚗 Véhicules compatibles ({entry.applications.length})
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                        {entry.applications.map((a, i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 11px", background:"#e8edf8", borderRadius:11, border:"1px solid rgba(108,99,255,0.07)" }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <span style={{ fontSize:13, fontWeight:700, color:"#1a1d2e" }}>{a.make} {a.model}</span>
+                              {a.chassis && <span style={{ fontSize:10, color:"#8890aa", marginLeft:6 }}>{a.chassis}</span>}
+                            </div>
+                            {(a.from || a.to) && (
+                              <span style={{ fontSize:11, fontWeight:600, color:"#6c63ff", background:"rgba(108,99,255,0.1)", borderRadius:20, padding:"2px 9px", whiteSpace:"nowrap", marginLeft:7 }}>
+                                {a.from}{a.to && a.to !== a.from ? ` – ${a.to}` : ""}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ── FICHE TECHNIQUE (style tableau photo 3) ── */}
+                    <div style={{ margin:"11px 13px 0", background:"#e8edf8", borderRadius:13, border:"1px solid rgba(108,99,255,0.12)", overflow:"hidden" }}>
+                      <div style={{ padding:"8px 12px 6px", borderBottom:"1px solid rgba(108,99,255,0.08)", fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2 }}>
+                        🔧 Technique
+                      </div>
+                      {entry.transponder && <Row label="ID transpondeur" value={entry.transponder} color="#6c63ff"/>}
+                      {entry.freq        && <Row label="Fréquence"       value={entry.freq}/>}
+                      {entry.blade       && <Row label="Lame"            value={entry.blade}/>}
+                      {entry.buttons     && <Row label="Boutons"         value={`${entry.buttons} bouton${entry.buttons>1?"s":""}`}/>}
+                      <Row label="Type" value={entry.type==="P"?"Proximité (ML)":entry.type==="S"?"Slot":"Télécommande"} color={entry.type==="P"?"#6c63ff":undefined}/>
+                      <Row label="Mains libres" value={isML?"✅ Oui":"Non"} color={isML?"#00b87a":"#5a6585"}/>
+                    </div>
+
+                    {/* ── WARNING TERRAIN ── */}
+                    {(isAES || isBSI || isRare) && (
+                      <div style={{ margin:"9px 13px 0", padding:"8px 11px", background:"rgba(232,160,32,0.08)", border:"1px solid rgba(232,160,32,0.25)", borderRadius:11 }}>
+                        <div style={{ fontSize:9, fontWeight:800, color:"#e8a020", textTransform:"uppercase", letterSpacing:1, marginBottom:3 }}>⚠ Note terrain</div>
+                        <div style={{ fontSize:11, color:"#5a4000", lineHeight:1.5 }}>
+                          {isRare && "Référence rare — confirmer par lecture avant commande. "}
+                          {isAES  && "Chiffrement AES — outil Pro compatible requis. "}
+                          {isBSI  && "BSI/CAS — logiciel à jour obligatoire."}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── FABRICANT / ÉLECTRONIQUE (Marelli, Delphi…) ── */}
+                    {curOeLinks.length > 0 && (
+                      <div style={{ padding:"11px 13px 0" }}>
+                        <div style={{ fontSize:10, fontWeight:800, color:"#3d4870", textTransform:"uppercase", letterSpacing:1.2, marginBottom:7 }}>
+                          🏭 Fabricant / Électronique
+                        </div>
+                        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                          {curOeLinks.map((lnk, li) => (
+                            <a key={li} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              style={{ fontSize:11, fontWeight:700, color:"#0284c7", background:"rgba(2,132,199,0.08)", border:"1px solid rgba(2,132,199,0.2)", borderRadius:20, padding:"5px 12px", textDecoration:"none", display:"inline-flex", alignItems:"center", gap:4 }}>
+                              🔗 {lnk.label}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── NOTE PRODUIT ── */}
+                    {entry.note && (
+                      <div style={{ margin:"9px 13px 0", padding:"8px 11px", background:"rgba(108,99,255,0.05)", border:"1px solid rgba(108,99,255,0.12)", borderRadius:11 }}>
+                        <div style={{ fontSize:10, color:"#5a6585", lineHeight:1.5 }}>ℹ️ {entry.note}</div>
+                      </div>
+                    )}
+
+                    <div style={{ height:11 }}/>
                   </div>
-                  {/* Pills specs */}
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {entry.transponder && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
-                        🔐 {entry.transponder}
-                      </span>
-                    )}
-                    {entry.freq && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
-                        📡 {entry.freq}
-                      </span>
-                    )}
-                    {entry.blade && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>
-                        🔑 Lame {entry.blade}{entry.buttons ? ` · ${entry.buttons} btn` : ""}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           );
         })}
@@ -2309,35 +1899,6 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [page, setPage] = useState("home");
-
-  // ── Images chargées lazily (aftermarket/recherche) ──────────
-  const [imgAssets, setImgAssets] = React.useState({
-    KEY_IMAGES: null, SILCA_IMGS: null, XHORSE_IMAGES: null
-  });
-  React.useEffect(() => {
-    if ((page === "aftermarket" || page === "recherche") && !imgAssets.KEY_IMAGES) {
-      Promise.all([
-        import("./keyImages.js"),
-        import("./silcaImages.js"),
-        import("./xhorseImages.js"),
-      ]).then(([ki, si, xi]) => {
-        setImgAssets({
-          KEY_IMAGES:    ki.KEY_IMAGES,
-          SILCA_IMGS:    si.SILCA_IMGS,
-          XHORSE_IMAGES: xi.XHORSE_IMAGES,
-        });
-      });
-    }
-  }, [page]);
-  const KEY_IMAGES    = imgAssets.KEY_IMAGES    || {};
-  const SILCA_IMGS    = imgAssets.SILCA_IMGS    || {};
-  const XHORSE_IMAGES = imgAssets.XHORSE_IMAGES || {};
-  const [vehiculesDB, setVehiculesDB] = useState(null);
-  useEffect(() => {
-    if (page === "vehicules" && !vehiculesDB) {
-      import("./data/vehiculesDB.js").then(m => setVehiculesDB(m.default));
-    }
-  }, [page]);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
@@ -2363,8 +1924,6 @@ export default function App() {
   const [selectedDevis, setSelectedDevis] = useState(null);
   const [intervFormProduct, setIntervFormProduct] = useState(null);
   const [toast, setToast] = useState(null);
-
-  const [xhorseTab, setXhorseTab] = useState(false);
   const [customAftermarket, setCustomAftermarket] = useState([]);
   const [showUrlImport, setShowUrlImport] = useState(false);
 
@@ -2608,16 +2167,6 @@ useEffect(() => {
 
 
       <div style={S.sectionTitle}>Accès rapide</div>
-
-      <div onClick={() => setPage("recherche")}
-        style={{ background: "#e8edf8", borderRadius: 20, padding: "18px 20px", marginBottom: 10, border: "1px solid rgba(167,139,250,0.35)", cursor: "pointer", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,#a78bfa,#6c63ff,transparent)" }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 50, height: 50, borderRadius: 14, background: "linear-gradient(135deg,#a78bfa,#6c63ff)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>🔍</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1d2e" }}>Recherche Vehicule</div>
-            <div style={{ fontSize: 12, color: "#5a6585", marginTop: 3 }}>{VEHICULE_DB.length} modeles indexes · {products.length} cles catalogue</div>
-          </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
@@ -2642,9 +2191,6 @@ useEffect(() => {
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Clients</div>
           <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>{clients.length} client{clients.length !== 1 ? "s" : ""}</div>
         </div>
-        <div onClick={() => { setXhorseTab(true); setPage("recherche"); setTimeout(() => setXhorseTab(false), 100); }}
-          style={{ background: "linear-gradient(135deg,rgba(234,88,12,0.08),rgba(249,115,22,0.04))", borderRadius: 16, padding: "14px 14px", border: "1px solid rgba(234,88,12,0.25)", cursor: "pointer" }}>
-          <div style={{ fontSize: 20, marginBottom: 6 }}>🔧</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>Xhorse</div>
           <div style={{ fontSize: 10, color: "#5a6585", marginTop: 3 }}>Catalogue VVDI</div>
         </div>
@@ -3478,7 +3024,6 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
               { key: "aftermarket",  icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>, label: "Aftermkt" },
               { key: "clients",      icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "Clients" },
               { key: "stats",        icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>, label: "Stats" },
-              { key: "vehicules",   icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>, label: "Base Clés" },
               { key: "settings",     icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, label: "Réglages" },
             ].map(item => (
               <button key={item.key} onClick={() => setPage(item.key)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, position: "relative", padding: "4px 0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -3494,57 +3039,6 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
         {page === "home" && renderHome()}
         {page === "stock" && renderStock()}
         {page === "aftermarket" && renderAftermarket()}
-        {page === "recherche" && (
-          <RechercheVehicule
-            products={products}
-            stock={stock}
-            setSelectedProduct={setSelectedProduct}
-            setPage={setPage}
-            setIntervFormProduct={function(p) { setIntervFormProduct(p); setShowIntervForm(true); }}
-            initialSearch={search}
-            initialTab={xhorseTab ? "xhorse" : undefined}
-            oeLinksOverrides={oeLinksOverrides}
-            setOeLinksOverrides={setOeLinksOverrides}
-            onShowAddProduit={() => setPage("aftermarket")}
-            onAddToStock={function(vp) {
-              var newProd = {
-                ...vp,
-                id: vp.id,
-                nom: vp.nom,
-                lame: vp.lame || vp.blade || "",
-                transpondeur: vp.transpondeur || vp.transponder || "",
-                freq: vp.freq || vp.frequence || "433 MHz",
-                type: vp.type || "Clé aftermarket",
-                ref: vp.ref || "",
-                marque: vp.marque || vp.marqueVehicule || "",
-                modeles: vp.modeles || vp.vehiculesCompatibles || "",
-                prix: vp.prix || 0,
-                categorie: vp.categorie || "Aftermarket France",
-                emoji: vp.emoji || "🔑",
-                image: vp.image || null,
-                xhorse: vp.xhorse || null,
-                remotes: vp.remotes || null,
-                prox: vp.prox || false,
-                lien: vp.lien || "",
-                oeLinks: vp.oeLinks || [],
-                notes: vp.notes || "",
-              };
-              setProducts(function(prev) {
-                if (prev.some(function(p) { return p.id === newProd.id; })) return prev;
-                return [...prev, newProd];
-              });
-              setStock(function(prev) {
-                if (prev[newProd.id]) return prev;
-                return { ...prev, [newProd.id]: { qty: 0, seuil: 3, historique: [], init: false } };
-              });
-              showToast("✅ " + newProd.nom + " ajouté au stock !");
-            }}
-          />
-        )}
-        {page === "recherche" && showIntervForm && (
-          <InterventionForm clients={clients} products={products}
-            defaultProduitId={intervFormProduct ? intervFormProduct.id : ""}
-            onSave={function(interv) { setInterventions(function(prev) { return [interv, ...prev]; }); setShowIntervForm(false); setIntervFormProduct(null); }}
             onClose={function() { setShowIntervForm(false); setIntervFormProduct(null); }} />
         )}
         {page === "detail" && selectedProduct && (
@@ -3585,7 +3079,6 @@ if (window.location.hash.includes("type=recovery")) return <ResetPasswordScreen 
         {page === "clientDetail" && selectedClient && renderClientDetail()}
         {page === "stats" && renderStats()}
         {page === "settings" && renderSettings()}
-        {page === "vehicules" && <BaseVehicule db={vehiculesDB} />}
 
         {factureUrl && (() => {
           const { interv, prod, num, tva, client: fc } = factureUrl;
