@@ -429,16 +429,46 @@ function StockScr({ cat, stk, onFiche }) {
 }
 
 // ── Écran Fiche détail ────────────────────────────────────────────────────────
-function FicheScr({ c, stk, onBack }) {
+function FicheScr({ c, stk, onBack, onUpdateImg }) {
   const si = gsi(c.id, stk);
   const tech = [c.tr, c.pcf?`PCF ${c.pcf}`:"", c.freq].filter(Boolean).join("  ·  ");
   const ls = c.lames.join(" / ");
+  const [url, setUrl] = useState("");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const analyseUrl = async () => {
+    if (!url.trim()) { setStatus("Colle une URL d'abord."); return; }
+    setLoading(true); setStatus("Recherche de la photo…");
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-6", max_tokens:300,
+          tools:[{type:"web_search_20250305",name:"web_search"}],
+          messages:[{role:"user",content:`Visite cette page produit : ${url.trim()}\nTrouve l'URL directe de la photo principale du produit (télécommande ou clé auto).\nRéponds UNIQUEMENT avec un JSON : {"img":"URL_DIRECTE"}\nSi pas de photo, {"img":""}.`}]
+        })
+      });
+      const data = await resp.json();
+      let text = "";
+      (data.content||[]).forEach(b => { if(b.type==="text") text+=b.text; });
+      const m = text.match(/\{[\s\S]*?\}/);
+      if (!m) { setStatus("Photo introuvable."); setLoading(false); return; }
+      const info = JSON.parse(m[0]);
+      if (info.img) { onUpdateImg(c.id, info.img); setStatus("Photo ajoutée ✓"); setUrl(""); }
+      else setStatus("Aucune photo trouvée.");
+    } catch(e) { setStatus("Erreur : " + e.message); }
+    setLoading(false);
+  };
+
   const R = (l, v, pl) => v!=null&&v!==""&&v!==0 ? (
     <div className="dr" key={l}>
       <span className="dl">{l}</span>
       <span className={`dv${pl?" pl":""}`}>{v}</span>
     </div>
   ) : null;
+
   return (
     <>
       <div className="hdr">
@@ -450,6 +480,7 @@ function FicheScr({ c, stk, onBack }) {
         <Bdg t={si.t} l={(si.t==="in"?"● ":si.t==="low"?"◐ ":"○ ")+si.l} />
       </div>
       <div className="scr">
+        {/* Hero photo */}
         <div className="dh">
           {c.img
             ? <img src={c.img} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt="" onError={e=>e.target.style.display="none"} />
@@ -467,6 +498,33 @@ function FicheScr({ c, stk, onBack }) {
             </div>
           </div>
         </div>
+
+        {/* Bloc ajout photo */}
+        <div style={{margin:"10px 14px",background:"var(--bg2)",border:"1px solid var(--b)",borderRadius:"var(--r)",padding:"10px 12px"}}>
+          <div style={{fontSize:9,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:7}}>
+            {c.img ? "Changer la photo" : "Ajouter une photo"}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <input
+              className="fi" style={{flex:1,fontSize:12}}
+              placeholder="Colle l'URL de la page produit…"
+              value={url} onChange={e=>setUrl(e.target.value)}
+            />
+            <button
+              className="hbk"
+              style={{background:"var(--bl)",color:"#fff",borderColor:"var(--bl)",whiteSpace:"nowrap"}}
+              onClick={analyseUrl} disabled={loading}
+            >
+              {loading ? "…" : "Extraire"}
+            </button>
+          </div>
+          {status && (
+            <div style={{fontSize:10,marginTop:5,color:status.includes("✓")?"var(--gr)":status.includes("Erreur")||status.includes("trouvable")?"var(--rd)":"var(--t3)"}}>
+              {status}
+            </div>
+          )}
+        </div>
+
         <div className="sl">Caractéristiques</div>
         <div className="db">
           {R("Transpondeur",c.tr)} {R("PCF",c.pcf)} {R("Fréquence",c.freq)}
@@ -498,41 +556,12 @@ function FicheScr({ c, stk, onBack }) {
 
 // ── Écran Ajout ───────────────────────────────────────────────────────────────
 function AddScr({ onSave, onBack }) {
-  const [url, setUrl] = useState("");
-  const [imgUrl, setImgUrl] = useState("");
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     marque:"Peugeot",gen:"G3",type:"nonMainLibre",btn:"3",
     tr:"ID46",pcf:"7941",freq:"433.92 MHz",pile:"CR2032",
     lames:"VA2, VA6",refs:"",compat:"",notes:""
   });
   const sf = (k,v) => setForm(p => ({...p,[k]:v}));
-
-  const analyseUrl = async () => {
-    if (!url.trim()) { setStatus("Colle une URL d'abord."); return; }
-    setLoading(true); setStatus("Recherche de la photo…");
-    try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          model:"claude-sonnet-4-6", max_tokens:300,
-          tools:[{type:"web_search_20250305",name:"web_search"}],
-          messages:[{role:"user",content:`Visite cette page produit : ${url.trim()}\nTrouve l'URL directe de la photo principale du produit (télécommande ou clé auto).\nRéponds UNIQUEMENT avec un JSON : {"img":"URL_DIRECTE"}\nSi pas de photo, {"img":""}.`}]
-        })
-      });
-      const data = await resp.json();
-      let text = "";
-      (data.content||[]).forEach(b => { if(b.type==="text") text+=b.text; });
-      const m = text.match(/\{[\s\S]*?\}/);
-      if (!m) { setStatus("Photo introuvable."); setLoading(false); return; }
-      const info = JSON.parse(m[0]);
-      if (info.img) { setImgUrl(info.img); setStatus("Photo trouvée ✓"); }
-      else setStatus("Aucune photo sur cette page.");
-    } catch(e) { setStatus("Erreur : " + e.message); }
-    setLoading(false);
-  };
 
   const save = () => {
     const compatLines = form.compat.split("\n").filter(l=>l.trim());
@@ -547,7 +576,7 @@ function AddScr({ onSave, onBack }) {
       tr: form.tr, pcf: form.pcf, freq: form.freq, pile: form.pile,
       lames: form.lames.split(",").map(x=>x.trim()).filter(Boolean),
       refs: form.refs.split(",").map(x=>x.trim()).filter(Boolean),
-      img: imgUrl, notes: form.notes, compat,
+      img: "", notes: form.notes, compat,
     });
   };
 
@@ -566,31 +595,7 @@ function AddScr({ onSave, onBack }) {
         <button className="hbk" style={{background:"var(--bl)",color:"#fff",borderColor:"var(--bl)"}} onClick={save}>Créer</button>
       </div>
       <div className="scr" style={{padding:"0 14px 80px"}}>
-        {/* URL → photo */}
-        <div style={{margin:"14px 0 10px"}}>
-          <div style={{fontSize:9,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:6}}>Photo via URL de page</div>
-          <div style={{display:"flex",gap:8}}>
-            <input className="fi" style={{flex:1}} placeholder="Colle l'URL de la page produit…" value={url} onChange={e=>setUrl(e.target.value)} />
-            <button className="hbk" style={{background:"var(--bl)",color:"#fff",borderColor:"var(--bl)",whiteSpace:"nowrap"}} onClick={analyseUrl} disabled={loading}>
-              {loading?"…":"Analyser"}
-            </button>
-          </div>
-          {status && <div style={{fontSize:10,color:status.includes("✓")?"var(--gr)":status.includes("Erreur")||status.includes("trouvable")?"var(--rd)":"var(--t3)",marginTop:5}}>{status}</div>}
-        </div>
-        {/* Prévisualisation photo */}
-        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
-          <div style={{width:70,height:70,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--b2)",overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"var(--t3)",textAlign:"center",lineHeight:1.4}}>
-            {imgUrl
-              ? <img src={imgUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="" onError={()=>setImgUrl("")} />
-              : "Aucune\nphoto"
-            }
-          </div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:9,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:4}}>URL image directe</div>
-            <input className="fi" style={{fontSize:11}} placeholder="https://…image.jpg" value={imgUrl} onChange={e=>setImgUrl(e.target.value)} />
-          </div>
-        </div>
-        <div style={{height:1,background:"var(--b)",margin:"4px 0 12px"}} />
+        <div style={{height:14}} />
         <FL label="Marque" k="marque" ph="Peugeot" />
         <FL label="Génération" k="gen" ph="G3" />
         <div style={{marginBottom:9}}>
@@ -629,6 +634,8 @@ export default function App() {
 
   const alerts = Object.keys(stk).filter(id => { const s=stk[id]; return s.qty>0&&s.qty<=s.seuil; }).length;
 
+  const updateImg = (id, img) => setCat(p => p.map(c => c.id===id ? {...c, img} : c));
+
   const openFiche = (c) => { setPrevTab(tab); setFiche(c); };
   const closeFiche = () => setFiche(null);
   const goTab = (t) => { setFiche(null); setAdding(false); setTab(t); };
@@ -643,7 +650,12 @@ export default function App() {
         {adding
           ? <AddScr onSave={saveNew} onBack={()=>setAdding(false)} />
           : fiche
-            ? <FicheScr c={fiche} stk={stk} onBack={closeFiche} />
+            ? <FicheScr
+                c={cat.find(x=>x.id===fiche.id)||fiche}
+                stk={stk}
+                onBack={closeFiche}
+                onUpdateImg={(id,img)=>{ updateImg(id,img); setFiche(p=>({...p,img})); }}
+              />
             : tab==="marques"
               ? <MarquesScr cat={cat} stk={stk} onFiche={openFiche} />
               : tab==="stock"
