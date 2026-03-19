@@ -103,6 +103,7 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
   const [editingNom, setEditingNom] = useState(false);
   const [editingPrix, setEditingPrix] = useState(false);
   const [editingImage, setEditingImage] = useState(false);
+  const [tab, setTab] = useState("infos");
 
   const s = stock[p.id];
   const isInit = s?.init === true;
@@ -160,75 +161,41 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           )
         )}
       </div>
+
+      {/* ── Onglets Infos / Modifier ── */}
+      <div style={{ display: "flex", background: "#c8d0e8", borderBottom: "2px solid rgba(108,99,255,0.15)" }}>
+        {[["infos","📋 Infos"],["modifier","✏️ Modifier"]].map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)}
+            style={{ flex: 1, padding: "11px 0", border: "none", background: "none", cursor: "pointer",
+              fontSize: 13, fontWeight: 700,
+              color: tab === key ? "#6c63ff" : "#5a6585",
+              borderBottom: tab === key ? "2.5px solid #6c63ff" : "2.5px solid transparent",
+              transition: "all 0.2s" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div style={{ position: "relative" }}>
         <img src={p.image} alt={p.nom} style={{ width: "100%", height: 190, objectFit: "contain", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.1)" }} onError={e => { e.target.src = FALLBACK_IMG; }} />
-        <button onClick={() => setEditingImage(v => !v)}
-          style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(108,99,255,0.85)", border: "none", borderRadius: 10, padding: "6px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", backdropFilter: "blur(4px)" }}>
-          📸 Changer la photo
-        </button>
       </div>
-      {editingImage && (
-        <div style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)", padding: "12px 14px" }}>
-          <div style={{ fontSize: 11, color: "#5a6585", marginBottom: 8, fontWeight: 600 }}>
-            Colle l'URL de la page produit ou directement l'URL de la photo
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input ref={imageRef}
-              type="text"
-              placeholder="https://www.fournisseur.fr/produit/..."
-              style={{ flex: 1, background: "#e8edf8", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 10, padding: "9px 12px", color: "#1a1d2e", fontSize: 12, outline: "none" }} />
-            <button onClick={async () => {
-              const val = imageRef.current?.value?.trim();
-              if (!val) return;
-              // Si c'est une URL d'image directe (.jpg, .png, .webp)
-              if (val.match(/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i)) {
-                if (onUpdateImage) { onUpdateImage(p.id, val); setEditingImage(false); showFlash("image"); }
-              } else {
-                // C'est une URL de page — on appelle l'API
-                showFlash("loading");
-                try {
-                  const r = await fetch("/api/image-produit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: val }) });
-                  const d = await r.json();
-                  if (d.image && onUpdateImage) { onUpdateImage(p.id, d.image); setEditingImage(false); showFlash("image"); }
-                  else { showFlash("error"); }
-                } catch { showFlash("error"); }
-              }
-            }} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>
-              {flash === "loading" ? "⏳" : "📸 OK"}
-            </button>
-            <button onClick={() => setEditingImage(false)} style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", cursor: "pointer" }}>✕</button>
-          </div>
-          {flash === "error" && <div style={{ marginTop: 6, fontSize: 11, color: "#ff4757", fontWeight: 600 }}>⚠ Impossible de trouver la photo sur cette page</div>}
-        </div>
-      )}
-      <div style={{ padding: 18, background: "#c8d0e8", borderRadius: "0 0 0 0" }}>
+      {/* ── En-tête nom/ref toujours visible ── */}
+      <div style={{ padding: "14px 18px 10px", background: "#c8d0e8", borderBottom: "1px solid rgba(108,99,255,0.08)" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: catColor(p.categorie), textTransform: "uppercase", letterSpacing: 1 }}>{p.categorie}</div>
-        {editingNom ? (
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-            <input ref={nomRef} defaultValue={p.nom}
-              style={{ background: "#e8edf8", border: "1px solid rgba(108,99,255,0.4)", borderRadius: 10, padding: "10px 12px", color: "#1a1d2e", fontSize: 14, fontWeight: 700, outline: "none", width: "100%" }}
-              placeholder="Nom du produit" />
-            <input ref={refRef} defaultValue={p.ref}
-              style={{ background: "#e8edf8", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 10, padding: "8px 12px", color: "#1a1d2e", fontSize: 12, fontFamily: "monospace", outline: "none", width: "100%" }}
-              placeholder="Référence" />
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => {
-                const nom = nomRef.current?.value?.trim();
-                const ref = refRef.current?.value?.trim();
-                if (nom && onUpdateNom) { onUpdateNom(p.id, nom, ref || p.ref); setEditingNom(false); showFlash("nom"); }
-              }} style={{ flex: 2, padding: "8px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>✓ Enregistrer</button>
-              <button onClick={() => setEditingNom(false)} style={{ flex: 1, padding: "8px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Annuler</button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginTop: 5 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#1a1d2e", lineHeight: 1.3 }}>{flash === "nom" ? "✓ Nom mis à jour !" : p.nom}</div>
-              <div style={{ fontSize: 12, color: "#5a6585", marginTop: 4, fontFamily: "monospace" }}>Réf : {p.ref}</div>
-            </div>
-            {onUpdateNom && <button onClick={() => setEditingNom(true)} style={{ background: "none", border: "none", color: "#5a6585", cursor: "pointer", padding: "2px 6px", fontSize: 14, marginLeft: 8, opacity: 0.6 }}>✏️</button>}
-          </div>
-        )}
+        <div style={{ fontSize: 17, fontWeight: 800, color: "#1a1d2e", marginTop: 3, lineHeight: 1.3 }}>{p.nom}</div>
+        <div style={{ fontSize: 12, color: "#5a6585", marginTop: 2, fontFamily: "monospace" }}>Réf : {p.ref}</div>
+      </div>
+
+      {/* ── Contenu conditionné par onglet ── */}
+      <div style={{ padding: 18 }}>
+
+      {tab === "infos" && (<>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          {p.type && <span style={{ fontSize: 10, fontWeight: 800, color: "#6c63ff", background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.3)", padding: "2px 8px", borderRadius: 5 }}>{p.type}</span>}
+          {p.ref && <span style={{ fontSize: 10, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "2px 9px", borderRadius: 5 }}>{p.ref}</span>}
+          {p.marque && <span style={{ fontSize: 10, fontWeight: 700, color: "#cc0000", background: "rgba(204,0,0,0.08)", padding: "2px 7px", borderRadius: 5 }}>{p.marque}</span>}
+          {p.prox && <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "#cc0000", padding: "2px 8px", borderRadius: 5 }}>🔒 Proximité</span>}
+        </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, marginBottom: 8 }}>
           {p.type && <span style={{ fontSize: 10, fontWeight: 800, color: "#6c63ff", background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.3)", padding: "2px 8px", borderRadius: 5 }}>{p.type}</span>}
           {p.ref && <span style={{ fontSize: 10, fontWeight: 900, color: "#fff", background: "linear-gradient(135deg,#cc0000,#ff4444)", padding: "2px 9px", borderRadius: 5 }}>{p.ref}</span>}
@@ -291,30 +258,106 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
             )}
           </div>
         )}
+      </>)}
 
-        {/* Modifier le prix */}
+      {tab === "modifier" && (<>
+
+        {/* ── Nom & Référence ── */}
+        <div style={{ background: "#e8edf8", borderRadius: 14, padding: 14, marginBottom: 12, border: "1px solid rgba(108,99,255,0.12)" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Nom & Référence</div>
+          {editingNom ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <input ref={nomRef} defaultValue={p.nom}
+                style={{ background: "#fff", border: "1px solid rgba(108,99,255,0.4)", borderRadius: 10, padding: "10px 12px", color: "#1a1d2e", fontSize: 14, fontWeight: 700, outline: "none", width: "100%" }}
+                placeholder="Nom du produit" />
+              <input ref={refRef} defaultValue={p.ref}
+                style={{ background: "#fff", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 10, padding: "8px 12px", color: "#1a1d2e", fontSize: 12, fontFamily: "monospace", outline: "none", width: "100%" }}
+                placeholder="Référence" />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => {
+                  const nom = nomRef.current?.value?.trim();
+                  const ref = refRef.current?.value?.trim();
+                  if (nom && onUpdateNom) { onUpdateNom(p.id, nom, ref || p.ref); setEditingNom(false); showFlash("nom"); }
+                }} style={{ flex: 2, padding: "8px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>✓ Enregistrer</button>
+                <button onClick={() => setEditingNom(false)} style={{ flex: 1, padding: "8px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1d2e" }}>{flash === "nom" ? "✓ Nom mis à jour !" : p.nom}</div>
+                <div style={{ fontSize: 11, color: "#5a6585", fontFamily: "monospace", marginTop: 2 }}>{p.ref}</div>
+              </div>
+              {onUpdateNom && <button onClick={() => setEditingNom(true)} style={{ background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)", borderRadius: 8, padding: "6px 10px", color: "#6c63ff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✏️ Modifier</button>}
+            </div>
+          )}
+        </div>
+
+        {/* ── Photo ── */}
+        <div style={{ background: "#e8edf8", borderRadius: 14, padding: 14, marginBottom: 12, border: "1px solid rgba(108,99,255,0.12)" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Photo</div>
+          {editingImage ? (
+            <div>
+              <div style={{ fontSize: 11, color: "#5a6585", marginBottom: 8 }}>URL de la page produit ou URL directe de l'image</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input ref={imageRef} type="text" placeholder="https://..."
+                  style={{ flex: 1, background: "#fff", border: "1px solid rgba(108,99,255,0.3)", borderRadius: 10, padding: "9px 12px", color: "#1a1d2e", fontSize: 12, outline: "none" }} />
+                <button onClick={async () => {
+                  const val = imageRef.current?.value?.trim();
+                  if (!val) return;
+                  if (val.match(/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i)) {
+                    if (onUpdateImage) { onUpdateImage(p.id, val); setEditingImage(false); showFlash("image"); }
+                  } else {
+                    showFlash("loading");
+                    try {
+                      const r = await fetch("/api/image-produit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: val }) });
+                      const d = await r.json();
+                      if (d.image && onUpdateImage) { onUpdateImage(p.id, d.image); setEditingImage(false); showFlash("image"); }
+                      else { showFlash("error"); }
+                    } catch { showFlash("error"); }
+                  }
+                }} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                  {flash === "loading" ? "⏳" : "OK"}
+                </button>
+                <button onClick={() => setEditingImage(false)} style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", cursor: "pointer" }}>✕</button>
+              </div>
+              {flash === "error" && <div style={{ marginTop: 6, fontSize: 11, color: "#ff4757", fontWeight: 600 }}>⚠ Impossible de trouver la photo</div>}
+            </div>
+          ) : (
+            <button onClick={() => setEditingImage(true)}
+              style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "rgba(108,99,255,0.05)", color: "#6c63ff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+              {flash === "image" ? "✓ Photo mise à jour !" : "📸 Changer la photo"}
+            </button>
+          )}
+        </div>
+
+        {/* ── Prix ── */}
         {onUpdatePrix && (
-          <div style={{ marginTop: 12 }}>
+          <div style={{ background: "#e8edf8", borderRadius: 14, padding: 14, marginBottom: 12, border: "1px solid rgba(108,99,255,0.12)" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#5a6585", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Prix indicatif HT</div>
             {editingPrix ? (
               <div style={{ display: "flex", gap: 6 }}>
                 <input ref={prixRef} type="number" min="0" step="0.01" defaultValue={p.prix || ""} placeholder="Prix HT (€)"
-                  style={{ flex: 1, background: "#e8edf8", border: "1px solid rgba(234,88,12,0.3)", borderRadius: 12, padding: "10px 14px", color: "#1a1d2e", fontSize: 13, outline: "none" }}
+                  style={{ flex: 1, background: "#fff", border: "1px solid rgba(234,88,12,0.3)", borderRadius: 10, padding: "10px 12px", color: "#1a1d2e", fontSize: 13, outline: "none" }}
                   onKeyDown={e => { if (e.key === "Enter") { onUpdatePrix(p.id, parseFloat(prixRef.current.value)); setEditingPrix(false); showFlash("prix"); } }} />
                 <button onClick={() => { const v = parseFloat(prixRef.current?.value); if (!isNaN(v) && v >= 0) { onUpdatePrix(p.id, v); setEditingPrix(false); showFlash("prix"); } }}
-                  style={{ padding: "10px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff", fontWeight: 700, fontSize: 12 }}>OK</button>
+                  style={{ padding: "10px 14px", borderRadius: 10, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#ea580c,#f97316)", color: "#fff", fontWeight: 700, fontSize: 12 }}>OK</button>
                 <button onClick={() => setEditingPrix(false)}
-                  style={{ padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>✕</button>
+                  style={{ padding: "10px 10px", borderRadius: 10, border: "1px solid rgba(108,99,255,0.2)", background: "transparent", color: "#5a6585", cursor: "pointer" }}>✕</button>
               </div>
             ) : (
-              <button onClick={() => setEditingPrix(true)}
-                style={{ width: "100%", padding: "10px", borderRadius: 12, border: "1px solid rgba(234,88,12,0.25)", background: "rgba(234,88,12,0.05)", color: "#ea580c", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                {flash === "prix" ? "✓ Prix mis à jour !" : `💰 Modifier le prix${p.prix ? " (" + p.prix.toFixed(2) + " €)" : ""}`}
-              </button>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 18, fontWeight: 900, color: "#e8a020" }}>{p.prix ? p.prix.toFixed(2) + " €" : "—"}</span>
+                <button onClick={() => setEditingPrix(true)} style={{ background: "rgba(234,88,12,0.08)", border: "1px solid rgba(234,88,12,0.2)", borderRadius: 8, padding: "6px 10px", color: "#ea580c", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {flash === "prix" ? "✓ Mis à jour !" : "✏️ Modifier"}
+                </button>
+              </div>
             )}
           </div>
         )}
 
-        <div style={{ background: "#e8edf8", borderRadius: 14, padding: 16, marginTop: 14, border: "1px solid rgba(108,99,255,0.12)" }}>
+        {/* ── Stock ── */}
+        <div style={{ background: "#e8edf8", borderRadius: 14, padding: 16, border: "1px solid rgba(108,99,255,0.12)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div>
               <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 9, color: "#5a6585", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Stock actuel</div>
@@ -346,25 +389,27 @@ function DetailPage({ product: p, stock, setStock, setPage, setShowHistory, catC
           <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
             <input ref={qtyRef} type="number" min="0"
               placeholder={flash === "qty" ? "✓ Enregistré !" : isInit ? "Quantité exacte" : `Quantité exacte (actuel : ${qty})`}
-              style={{ flex: 1, background: flash === "qty" ? "rgba(0,245,147,0.08)" : "#e8edf8", border: `1px solid ${flash === "qty" ? "#00b87a" : "rgba(108,99,255,0.2)"}`, borderRadius: 12, padding: "10px 14px", color: flash === "qty" ? "#00b87a" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
+              style={{ flex: 1, background: flash === "qty" ? "rgba(0,245,147,0.08)" : "#fff", border: `1px solid ${flash === "qty" ? "#00b87a" : "rgba(108,99,255,0.2)"}`, borderRadius: 12, padding: "10px 14px", color: flash === "qty" ? "#00b87a" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
               onKeyDown={e => e.key === "Enter" && handleSetQty()} />
             <button style={{ padding: "10px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12 }} onClick={handleSetQty}>Définir</button>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
             <input ref={seuilRef} type="number" min="0"
               placeholder={flash === "seuil" ? `✓ Seuil → ${seuil}` : `Seuil alerte (actuel: ${seuil})`}
-              style={{ flex: 1, background: flash === "seuil" ? "rgba(0,245,147,0.08)" : "#e8edf8", border: `1px solid ${flash === "seuil" ? "#00b87a" : "rgba(108,99,255,0.2)"}`, borderRadius: 12, padding: "10px 14px", color: flash === "seuil" ? "#00b87a" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
+              style={{ flex: 1, background: flash === "seuil" ? "rgba(0,245,147,0.08)" : "#fff", border: `1px solid ${flash === "seuil" ? "#00b87a" : "rgba(108,99,255,0.2)"}`, borderRadius: 12, padding: "10px 14px", color: flash === "seuil" ? "#00b87a" : "#1a1d2e", fontSize: 13, outline: "none", transition: "all 0.3s" }}
               onKeyDown={e => e.key === "Enter" && handleSetSeuil()} />
             <button style={{ padding: "10px 14px", borderRadius: 12, border: "none", cursor: "pointer", background: "linear-gradient(135deg,#6c63ff,#00d4ff)", color: "#fff", fontWeight: 700, fontSize: 12 }} onClick={handleSetSeuil}>Seuil</button>
           </div>
         </div>
+      </>)}
 
-        {ln && <a href={p.lien} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: ln.bg, color: ln.color, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, textDecoration: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}><DIcon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /> {ln.label}</a>}
-        <a href={`https://www.google.com/search?q=${encodeURIComponent(p.nom)}`} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(66,133,244,0.25)", cursor: "pointer", background: "rgba(66,133,244,0.08)", color: "#2563eb", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10, textDecoration: "none", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      </div>
+
+        {ln && tab === "infos" && <div style={{ padding: "0 18px" }}><a href={p.lien} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "none", cursor: "pointer", background: ln.bg, color: ln.color, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10, textDecoration: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", fontFamily: "'Plus Jakarta Sans', sans-serif" }}><DIcon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /> {ln.label}</a></div>}
+        {tab === "infos" && <div style={{ padding: "0 18px 18px" }}><a href={`https://www.google.com/search?q=${encodeURIComponent(p.nom)}`} target="_blank" rel="noopener noreferrer" style={{ width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(66,133,244,0.25)", cursor: "pointer", background: "rgba(66,133,244,0.08)", color: "#2563eb", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
           Rechercher sur Google
-        </a>
-      </div>
+        </a></div>}
     </div>
   );
 }
