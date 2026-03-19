@@ -1922,7 +1922,7 @@ function UrlProductImport({ onProductCreated, onClose }) {
             <input value={form.freq} onChange={e => set("freq", e.target.value)} placeholder="ex: 433MHz" style={inp} />
           </div>
           <div style={row}>
-            <label style={lbl}>Transpondeur (PCF)</label>
+            <label style={lbl}>PCF</label>
             <input value={form.transpondeur} onChange={e => set("transpondeur", e.target.value)} placeholder="ex: PCF7945" style={inp} />
           </div>
           <div style={row}>
