@@ -1423,61 +1423,118 @@ function AftermarketTab({ products, stock, onAddToStock, onViewStock, onShowUrlI
                     </div>
                   </div>
 
-                  {/* ── Panneau déplié ── */}
-                  {isOpen && (
-                    <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", padding: "14px 14px 12px", background: "rgba(108,99,255,0.025)" }}>
-                      {/* Modèles / années */}
-                      {(p.modeles || p.annees) && (
-                        <>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: "#3d4870", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 8 }}>
-                            Véhicules compatibles
+                  {/* ── Panneau déplié custom ── */}
+                  {isOpen && (() => {
+                    const cTrans = (p.transpondeur || "").toUpperCase();
+                    const cAES   = cTrans.includes("AES") || cTrans.includes("PCF7961") || cTrans.includes("ID49") || cTrans.includes("ID4A");
+                    const cBSI   = cTrans.includes("ID88") || cTrans.includes("ID50");
+                    const cML    = p.mainLibre === "oui";
+                    const cDiff  = cAES ? "Expert" : cBSI ? "Avancé" : "Standard";
+                    const cDiffC = cAES ? "#ff4757" : cBSI ? "#e8a020" : "#00b87a";
+                    const cTemps = cAES ? "45min" : cBSI ? "35min" : "25min";
+                    const cMeth  = cML ? "OBD" : "Standard";
+                    return (
+                      <div style={{ borderTop: "1px solid rgba(108,99,255,0.1)", background: "#f0f3fa" }}>
+
+                        {/* BLOC DÉCISION RAPIDE */}
+                        <div style={{ margin: "10px 12px 0", background: "#1a1f35", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(108,99,255,0.3)" }}>
+                          <div style={{ fontSize: 9, fontWeight: 800, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 10 }}>⚡ Décision rapide</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 7 }}>
+                            <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 9, padding: "8px 9px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginBottom: 3 }}>📅 Années</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>{p.annees || "—"}</div>
+                            </div>
+                            <div style={{ background: cML ? "rgba(108,99,255,0.2)" : "rgba(255,255,255,0.06)", borderRadius: 9, padding: "8px 9px", border: `1px solid ${cML ? "rgba(108,99,255,0.4)" : "rgba(255,255,255,0.08)"}` }}>
+                              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginBottom: 3 }}>🔑 Type</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: cML ? "#a78bfa" : "#fff" }}>{cML ? "ML" : "NON ML"}</div>
+                            </div>
+                            <div style={{ background: cDiffC + "22", borderRadius: 9, padding: "8px 9px", border: `1px solid ${cDiffC}44` }}>
+                              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginBottom: 3 }}>⚠ Risque</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: cDiffC }}>{cDiff}</div>
+                            </div>
+                            <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 9, padding: "8px 9px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginBottom: 3 }}>⏱ Temps</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>{cTemps}</div>
+                            </div>
+                            <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 9, padding: "8px 9px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginBottom: 3 }}>🔌 Méthode</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>{cMeth}</div>
+                            </div>
+                            <div style={{ background: (cAES || cBSI) ? "rgba(232,160,32,0.2)" : "rgba(0,184,122,0.12)", borderRadius: 9, padding: "8px 9px", border: `1px solid ${(cAES || cBSI) ? "rgba(232,160,32,0.4)" : "rgba(0,184,122,0.3)"}` }}>
+                              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", marginBottom: 3 }}>🔐 Chiffrement</div>
+                              <div style={{ fontSize: 12, fontWeight: 800, color: (cAES || cBSI) ? "#e8a020" : "#00b87a" }}>{cAES ? "AES" : cBSI ? "BSI" : "Simple"}</div>
+                            </div>
                           </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 12 }}>
-                            {p.modeles.split(/[,;]+/).map((m, i) => m.trim()).filter(Boolean).map((m, i) => (
-                              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px", background: "#e8edf8", borderRadius: 12, border: "1px solid rgba(108,99,255,0.07)" }}>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1d2e" }}>{m}</span>
-                                {p.annees && i === 0 && (
-                                  <span style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.1)", borderRadius: 20, padding: "3px 10px", whiteSpace: "nowrap", marginLeft: 8 }}>
-                                    {p.annees}
-                                  </span>
-                                )}
+                        </div>
+
+                        {/* Véhicules compatibles */}
+                        {(p.modeles || p.annees) && (
+                          <div style={{ margin: "9px 12px 0", background: "#fff", borderRadius: 13, border: "1px solid rgba(108,99,255,0.1)", overflow: "hidden" }}>
+                            <div style={{ padding: "8px 13px 7px", borderBottom: "1px solid rgba(108,99,255,0.07)", fontSize: 10, fontWeight: 800, color: "#3d4870", textTransform: "uppercase", letterSpacing: 1.2 }}>🚗 Variantes compatibles</div>
+                            {(p.modeles || "").split(/[,;]+/).map(m => m.trim()).filter(Boolean).map((m, i) => (
+                              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 13px", borderBottom: "1px solid rgba(108,99,255,0.06)" }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1d2e" }}>{m}</span>
+                                {p.annees && i === 0 && <span style={{ fontSize: 11, fontWeight: 600, color: "#6c63ff", background: "rgba(108,99,255,0.08)", borderRadius: 20, padding: "2px 9px" }}>{p.annees}</span>}
                               </div>
                             ))}
                           </div>
-                        </>
-                      )}
-                      {/* Pills techniques */}
-                      {techPills.length > 0 && (
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: metaPills.length ? 8 : 0 }}>
-                          {techPills.map((pill, i) => (
-                            <span key={i} style={{ fontSize: 10, fontWeight: 600, color: "#5a6585", background: "#e8edf8", border: "1px solid rgba(108,99,255,0.15)", borderRadius: 20, padding: "4px 10px" }}>{pill}</span>
+                        )}
+
+                        {/* Technique */}
+                        <div style={{ margin: "9px 12px 0", background: "#fff", borderRadius: 13, border: "1px solid rgba(108,99,255,0.1)", overflow: "hidden" }}>
+                          <div style={{ padding: "8px 13px 7px", borderBottom: "1px solid rgba(108,99,255,0.07)", fontSize: 10, fontWeight: 800, color: "#3d4870", textTransform: "uppercase", letterSpacing: 1.2 }}>🔧 Technique</div>
+                          {[
+                            p.transpondeur ? ["ID transpondeur", p.transpondeur, "#6c63ff"] : null,
+                            p.pcf          ? ["PCF",             p.pcf,          "#6c63ff"] : null,
+                            p.freq         ? ["Fréquence",       p.freq,         null]      : null,
+                            p.lame         ? ["Lame",            p.lame,         null]      : null,
+                            p.boutons      ? ["Boutons",         p.boutons,      null]      : null,
+                            p.pile         ? ["Pile",            p.pile,         null]      : null,
+                          ].filter(Boolean).map(([label, value, color], i) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 13px", borderBottom: "1px solid rgba(108,99,255,0.06)" }}>
+                              <span style={{ fontSize: 12, color: "#7a84a0" }}>{label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: color || "#1a1d2e" }}>{value}</span>
+                            </div>
                           ))}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 13px" }}>
+                            <span style={{ fontSize: 12, color: "#7a84a0" }}>Mains libres</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: cML ? "#00b87a" : "#5a6585" }}>{cML ? "✅ Oui" : "Non"}</span>
+                          </div>
                         </div>
-                      )}
-                      {/* EAN + Réf. origine */}
-                      {metaPills.length > 0 && (
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                          {metaPills.map((pill, i) => (
-                            <span key={i} style={{ fontSize: 10, fontWeight: 600, color: "#8890aa", background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.1)", borderRadius: 20, padding: "4px 10px" }}>{pill}</span>
-                          ))}
-                        </div>
-                      )}
-                      {/* Lien fournisseur */}
-                      {p.lien && (
-                        <a href={p.lien} target="_blank" rel="noopener noreferrer"
-                          style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 10, fontSize: 11, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 20, padding: "5px 12px", textDecoration: "none" }}>
-                          🔗 Voir la page fournisseur
-                        </a>
-                      )}
-                      {/* Bouton supprimer */}
-                      {onDeleteCustom && (
-                        <button onClick={() => onDeleteCustom(p.id)}
-                          style={{ marginTop: 12, width: "100%", padding: "9px", borderRadius: 10, border: "1px solid rgba(255,71,87,0.25)", background: "rgba(255,71,87,0.06)", color: "#ff4757", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                          🗑 Supprimer cette fiche
-                        </button>
-                      )}
-                    </div>
-                  )}
+
+                        {/* Pills meta */}
+                        {metaPills.length > 0 && (
+                          <div style={{ padding: "9px 12px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {metaPills.map((pill, i) => (
+                              <span key={i} style={{ fontSize: 10, fontWeight: 600, color: "#8890aa", background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.1)", borderRadius: 20, padding: "4px 10px" }}>{pill}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Lien fournisseur */}
+                        {p.lien && (
+                          <div style={{ padding: "9px 12px 0" }}>
+                            <a href={p.lien} target="_blank" rel="noopener noreferrer"
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "#0284c7", background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.2)", borderRadius: 20, padding: "5px 12px", textDecoration: "none" }}>
+                              🔗 Voir la page fournisseur
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Supprimer */}
+                        {onDeleteCustom && (
+                          <div style={{ padding: "9px 12px 0" }}>
+                            <button onClick={() => onDeleteCustom(p.id)}
+                              style={{ width: "100%", padding: "9px", borderRadius: 10, border: "1px solid rgba(255,71,87,0.25)", background: "rgba(255,71,87,0.06)", color: "#ff4757", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                              🗑 Supprimer cette fiche
+                            </button>
+                          </div>
+                        )}
+
+                        <div style={{ height: 12 }} />
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
