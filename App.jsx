@@ -63,26 +63,22 @@ html,body,#root{height:100%;background:var(--bg);}
 .sec-logo img{width:100%;height:100%;object-fit:cover;}
 .sec-name{font-size:14px;font-weight:700;color:var(--t);}
 .sec-cnt{font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;}
-.cc{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin:0 14px 10px;cursor:pointer;transition:border-color .12s;}
-.cc:hover{border-color:var(--b3);}
-.cc-top{display:flex;min-height:88px;}
-.cc-img{width:80px;min-width:80px;background:var(--bg3);overflow:hidden;flex-shrink:0;}
+.cc{background:#161a24;border:1px solid #2a3045;border-radius:16px;overflow:hidden;margin:0 14px 12px;cursor:pointer;transition:border-color .15s,transform .1s;active:transform:scale(.98);}
+.cc:active{transform:scale(.98);}
+.cc-top{display:flex;align-items:stretch;min-height:76px;}
+.cc-img{width:72px;min-width:72px;background:#1e2235;overflow:hidden;flex-shrink:0;}
 .cc-img img{width:100%;height:100%;object-fit:cover;display:block;}
-.cc-body{flex:1;padding:10px 11px;display:flex;flex-direction:column;gap:4px;min-width:0;}
-.cc-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
-.cc-title{font-size:12.5px;font-weight:700;color:var(--t);line-height:1.25;flex:1;}
-.cc-tech{font-size:10.5px;color:var(--t2);font-family:'JetBrains Mono',monospace;line-height:1.5;}
-.cc-lames{font-size:10px;color:var(--t3);}
-.cc-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;align-items:center;}
-.cc-div{height:1px;background:var(--b);}
-.cc-compat{padding:8px 11px;}
-.cc-cl{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:4px;}
-.cc-cm{font-size:11px;color:var(--t);line-height:1.7;}
-.cc-other{font-size:11px;color:var(--bl);margin-top:4px;display:flex;align-items:center;gap:4px;}
-.cc-dot{width:5px;height:5px;border-radius:50%;background:var(--bl);flex-shrink:0;}
-.cc-note{padding:6px 11px;border-top:1px solid var(--b);}
-.cc-ntxt{font-size:10px;color:var(--t3);line-height:1.55;font-style:italic;}
-.cc-warn{color:var(--am);}
+.cc-body{flex:1;padding:12px 13px;display:flex;flex-direction:column;justify-content:center;gap:5px;min-width:0;}
+.cc-row1{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.cc-title{font-size:15px;font-weight:700;color:#f0f2f8;line-height:1.2;flex:1;}
+.cc-row2{font-size:12px;color:#8b95b8;font-family:'JetBrains Mono',monospace;letter-spacing:.02em;}
+.cc-row3{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+.cc-sep{height:1px;background:#1e2438;margin:0 13px;}
+.cc-compat{padding:9px 13px;}
+.cc-mods{font-size:12px;color:#c8cfe8;line-height:1.6;}
+.cc-more{font-size:11px;color:var(--bl);margin-top:2px;}
+.cc-also{font-size:11px;color:var(--t3);margin-top:3px;}
+.cc-warn-strip{padding:7px 13px;background:rgba(245,158,11,.06);border-top:1px solid rgba(245,158,11,.15);font-size:10px;color:var(--am);line-height:1.5;}
 .dh{position:relative;height:170px;background:var(--bg3);overflow:hidden;flex-shrink:0;}
 .dh-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,12,16,.97) 0%,rgba(10,12,16,.3) 55%,transparent 100%);}
 .dh-info{position:absolute;bottom:0;left:0;right:0;padding:13px 14px;}
@@ -198,45 +194,57 @@ function gsi(id, stk) {
 // ── Carte clé ────────────────────────────────────────────────────────────────
 function CleCard({ c, mq, stk, onClick }) {
   const si = gsi(c.id, stk);
-  const ls = c.lames.join(" / ");
-  const tech = [c.tr, c.pcf ? `PCF ${c.pcf}` : "", c.freq].filter(Boolean).join("  ·  ");
   const mods = c.compat.filter(v => v.m === mq);
   const autres = [...new Set(c.compat.filter(v => v.m !== mq).map(v => v.m))];
+  const techLine = [c.tr, c.freq].filter(Boolean).join("  ·  ");
   const isWarn = c.notes?.startsWith("⚠️");
+
   return (
     <div className="cc" onClick={onClick}>
+      {/* Ligne 1 — image + infos principales */}
       <div className="cc-top">
         <div className="cc-img"><KeyImg marque={c.marque} img={c.img} /></div>
         <div className="cc-body">
-          <div className="cc-hdr">
-            <div className="cc-title">{TL[c.type] || c.type}{c.btn ? ` · ${c.btn} btn` : ""}</div>
-            <Bdg t={si.t} l={(si.t==="in"?"● ":si.t==="low"?"◐ ":"○ ")+si.l} />
+          {/* Titre + badge stock */}
+          <div className="cc-row1">
+            <div className="cc-title">
+              {TL[c.type] || c.type}{c.btn ? ` · ${c.btn} btn` : ""}
+            </div>
+            <Bdg t={si.t} l={si.t==="in" ? `● ${si.l.split("·")[1]?.trim()||si.l}` : si.t==="low" ? `◐ ${si.l}` : "○ Rupture"} />
           </div>
-          {tech && <div className="cc-tech">{tech}</div>}
-          {ls && <div className="cc-lames">Lames : {ls}</div>}
-          <div className="cc-tags">
+          {/* Transpondeur + fréquence */}
+          {techLine && <div className="cc-row2">{techLine}</div>}
+          {/* Badges */}
+          <div className="cc-row3">
             <GenBdg g={c.gen} />
             {c.pile && <Bdg t="neu" l={c.pile} />}
           </div>
         </div>
       </div>
-      <div className="cc-div" />
+
+      {/* Ligne 2 — compatibilités (2 max) */}
+      <div className="cc-sep" />
       <div className="cc-compat">
-        <div className="cc-cl">Modèles {mq || c.marque} compatibles</div>
-        <div className="cc-cm">
-          {mods.slice(0,4).map((v,i) => (
-            <span key={i}>{i>0?" · ":""}<b>{v.v}</b>{" "}<span style={{color:"var(--t3)",fontSize:10}}>{v.a}</span></span>
+        <div className="cc-mods">
+          {mods.slice(0,2).map((v,i) => (
+            <span key={i}>
+              {i>0 && <span style={{color:"var(--t3)"}}> · </span>}
+              <b style={{color:"#e2e8f0"}}>{v.v}</b>
+              <span style={{color:"var(--t3)",fontSize:11}}> {v.a}</span>
+            </span>
           ))}
-          {mods.length > 4 && <span style={{color:"var(--t3)",fontSize:10}}> +{mods.length-4} autres</span>}
         </div>
+        {mods.length > 2 && (
+          <div className="cc-more">+{mods.length-2} autres modèles {mq}</div>
+        )}
         {autres.length > 0 && (
-          <div className="cc-other"><span className="cc-dot" />Aussi compatible : {autres.join(", ")}</div>
+          <div className="cc-also">+ {autres.join(", ")}</div>
         )}
       </div>
-      {c.notes && (
-        <div className="cc-note">
-          <div className={`cc-ntxt${isWarn?" cc-warn":""}`}>{c.notes}</div>
-        </div>
+
+      {/* Alerte terrain uniquement si ⚠️ */}
+      {isWarn && (
+        <div className="cc-warn-strip">⚠️ {c.notes.replace("⚠️ ","")}</div>
       )}
     </div>
   );
@@ -433,32 +441,7 @@ function FicheScr({ c, stk, onBack, onUpdateImg }) {
   const si = gsi(c.id, stk);
   const tech = [c.tr, c.pcf?`PCF ${c.pcf}`:"", c.freq].filter(Boolean).join("  ·  ");
   const ls = c.lames.join(" / ");
-  const [url, setUrl] = useState("");
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const analyseUrl = async () => {
-    if (!url.trim()) { setStatus("Colle une URL d'abord."); return; }
-    setLoading(true); setStatus("Recherche de la photo…");
-    try {
-      const resp = await fetch("/api/photo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
-      });
-      if (!resp.ok) throw new Error(`Serveur : ${resp.status}`);
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-      if (data.img) {
-        onUpdateImg(c.id, data.img);
-        setStatus("Photo ajoutée ✓");
-        setUrl("");
-      } else {
-        setStatus("Aucune photo trouvée sur cette page.");
-      }
-    } catch (e) { setStatus("Erreur : " + e.message); }
-    setLoading(false);
-  };
+  const [imgInput, setImgInput] = useState(c.img || "");
 
   const R = (l, v, pl) => v!=null&&v!==""&&v!==0 ? (
     <div className="dr" key={l}>
@@ -497,7 +480,7 @@ function FicheScr({ c, stk, onBack, onUpdateImg }) {
           </div>
         </div>
 
-        {/* Bloc ajout photo */}
+        {/* Bloc photo — URL directe */}
         <div style={{margin:"10px 14px",background:"var(--bg2)",border:"1px solid var(--b)",borderRadius:"var(--r)",padding:"10px 12px"}}>
           <div style={{fontSize:9,fontWeight:700,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:7}}>
             {c.img ? "Changer la photo" : "Ajouter une photo"}
@@ -505,22 +488,19 @@ function FicheScr({ c, stk, onBack, onUpdateImg }) {
           <div style={{display:"flex",gap:8}}>
             <input
               className="fi" style={{flex:1,fontSize:12}}
-              placeholder="Colle l'URL de la page produit…"
-              value={url} onChange={e=>setUrl(e.target.value)}
+              placeholder="Colle l'URL directe de l'image (https://…jpg)"
+              value={imgInput}
+              onChange={e => setImgInput(e.target.value)}
             />
             <button
               className="hbk"
               style={{background:"var(--bl)",color:"#fff",borderColor:"var(--bl)",whiteSpace:"nowrap"}}
-              onClick={analyseUrl} disabled={loading}
-            >
-              {loading ? "…" : "Extraire"}
-            </button>
+              onClick={() => onUpdateImg(c.id, imgInput.trim())}
+            >OK</button>
           </div>
-          {status && (
-            <div style={{fontSize:10,marginTop:5,color:status.includes("✓")?"var(--gr)":status.includes("Erreur")||status.includes("trouvable")?"var(--rd)":"var(--t3)"}}>
-              {status}
-            </div>
-          )}
+          <div style={{fontSize:10,color:"var(--t3)",marginTop:5}}>
+            Clic droit sur une image → "Copier l'adresse de l'image" → colle ici
+          </div>
         </div>
 
         <div className="sl">Caractéristiques</div>
